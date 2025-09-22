@@ -5,8 +5,5 @@
       "src": "package.json",
       "use": "@vercel/next"
     }
-  ],
-  "env": {
-    "PURELYMAIL_API_KEY": "@purelymail_api_key"
-  }
+  ]
 }

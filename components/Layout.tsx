@@ -8,7 +8,9 @@ import {
   ArrowPathIcon,
   UsersIcon,
   CogIcon,
+  ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline';
+import { useAuth } from '@/hooks/useAuth';
 
 interface LayoutProps {
   children: ReactNode;
@@ -25,6 +27,7 @@ const navigation = [
 
 export default function Layout({ children, title = 'PurelyMail Management' }: LayoutProps) {
   const router = useRouter();
+  const { logout, user } = useAuth();
 
   return (
     <>
@@ -68,6 +71,22 @@ export default function Layout({ children, title = 'PurelyMail Management' }: La
                 );
               })}
             </nav>
+
+            {/* User info and logout */}
+            <div className="px-4 py-4 border-t border-gray-200">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm text-gray-600">
+                  Signed in as <span className="font-medium text-gray-900">{user || 'admin'}</span>
+                </div>
+              </div>
+              <button
+                onClick={logout}
+                className="group flex w-full items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100 hover:text-gray-900 transition-colors"
+              >
+                <ArrowRightOnRectangleIcon className="mr-3 h-5 w-5 text-gray-400 group-hover:text-gray-500" />
+                Sign out
+              </button>
+            </div>
           </div>
         </div>
 

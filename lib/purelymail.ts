@@ -44,6 +44,24 @@ export interface AccountCredit {
   credit: string; // BigDecimal string
 }
 
+// Like Promise.all(items.map(fn)), but runs at most `limit` calls at a time.
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const index = next++;
+      results[index] = await fn(items[index]);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
 export class PurelyMailAPI {
   private client: AxiosInstance;
 
@@ -153,29 +171,28 @@ export class PurelyMailAPI {
     if (response.data.type === 'success') {
       const userNames = response.data.result.users || response.data.result || [];
       
-      // Get detailed information for each user
-      const users = await Promise.all(
-        userNames.map(async (userName: string) => {
-          try {
-            const userDetails = await this.getUser(userName);
-            return {
-              ...userDetails,
-              userName
-            };
-          } catch (error) {
-            // If we can't get user details, return basic info
-            return {
-              userName,
-              enableSearchIndexing: true,
-              recoveryEnabled: false,
-              requireTwoFactorAuthentication: false,
-              enableSpamFiltering: true,
-              resetMethods: []
-            };
-          }
-        })
-      );
-      
+      // listUser only returns names, so fetch details per user,
+      // a few at a time to avoid flooding the PurelyMail API.
+      const users = await mapWithConcurrency(userNames, 5, async (userName: string) => {
+        try {
+          const userDetails = await this.getUser(userName);
+          return {
+            ...userDetails,
+            userName
+          };
+        } catch (error) {
+          // If we can't get user details, return basic info
+          return {
+            userName,
+            enableSearchIndexing: true,
+            recoveryEnabled: false,
+            requireTwoFactorAuthentication: false,
+            enableSpamFiltering: true,
+            resetMethods: []
+          };
+        }
+      });
+
       return users;
     }
     throw new Error(response.data.message || 'Failed to list users');
@@ -209,7 +226,7 @@ export class PurelyMailAPI {
       userName: localPart,
       domainName: domain,
       password: userData.password,
-      enablePasswordReset: userData.recoveryEnabled || true,
+      enablePasswordReset: userData.recoveryEnabled !== false,
       enableSearchIndexing: userData.enableSearchIndexing !== false,
       sendWelcomeEmail: false, // Don't send welcome emails by default
     };

@@ -2,6 +2,7 @@ import { AppProps } from 'next/app';
 import { useRouter } from 'next/router';
 import '@/styles/globals.css';
 import { AuthGuard } from '@/components/auth/AuthGuard';
+import { AuthProvider } from '@/hooks/useAuth';
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
@@ -12,8 +13,10 @@ export default function App({ Component, pageProps }: AppProps) {
   }
 
   return (
-    <AuthGuard>
-      <Component {...pageProps} />
-    </AuthGuard>
+    <AuthProvider>
+      <AuthGuard>
+        <Component {...pageProps} />
+      </AuthGuard>
+    </AuthProvider>
   );
 }

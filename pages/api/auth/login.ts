@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import bcrypt from 'bcrypt';
 import { SignJWT } from 'jose';
 import { AUTH_COOKIE, getJwtSecret } from '@/lib/auth';
+import { verifyAdminPassword } from '@/lib/password';
 
 export default async function handler(
   req: NextApiRequest,
@@ -14,7 +14,7 @@ export default async function handler(
   try {
     const { password } = req.body;
 
-    if (!password) {
+    if (typeof password !== 'string' || !password) {
       return res.status(400).json({ error: 'Password is required' });
     }
 
@@ -26,9 +26,7 @@ export default async function handler(
       return res.status(500).json({ error: 'Server configuration error' });
     }
 
-    // Compare password with admin password
-    // In production, this should be hashed, but for simplicity we'll use plain text comparison
-    const isValid = password === adminPassword;
+    const isValid = await verifyAdminPassword(password, adminPassword);
 
     if (!isValid) {
       return res.status(401).json({ error: 'Invalid password' });

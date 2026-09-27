@@ -156,8 +156,18 @@ The application integrates with the following PurelyMail API endpoints:
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `PURELYMAIL_API_KEY` | Your PurelyMail API key | Yes |
-| `ADMIN_PASSWORD` | Password used to log in to the panel | Yes |
+| `ADMIN_PASSWORD` | Password used to log in to the panel. A bcrypt hash is recommended (see below); plain text also works. | Yes |
 | `JWT_SECRET` | Random secret for signing session tokens (e.g. `openssl rand -base64 32`). Login fails if it is not set. | Yes |
+
+### Using a hashed admin password
+
+Generate a bcrypt hash and use it as `ADMIN_PASSWORD`:
+
+```bash
+node -e "require('bcrypt').hash(process.argv[1], 12).then(console.log)" 'your-password'
+```
+
+In `.env.local`, escape each `$` in the hash as `\$`, because Next.js expands `$` in env files. In the Vercel dashboard, paste the hash as is.
 
 ## Contributing
 

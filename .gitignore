@@ -32,4 +32,5 @@ pids
 
 # OS
 .DS_Store
-Thumbs.db*.tsbuildinfo
+Thumbs.db
+*.tsbuildinfo

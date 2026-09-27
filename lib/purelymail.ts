@@ -316,21 +316,21 @@ export class PurelyMailAPI {
   }
 
   // App Password Methods
-  async createAppPassword(userName: string, description: string): Promise<{ password: string }> {
-    const response = await this.client.post('/createAppPassword', { 
-      userName,
-      description
+  async createAppPassword(userHandle: string, name: string = ''): Promise<string> {
+    const response = await this.client.post('/createAppPassword', {
+      userHandle,
+      name
     });
     if (response.data.type === 'success') {
-      return response.data.result;
+      return response.data.result.appPassword;
     }
     throw new Error(response.data.message || 'Failed to create app password');
   }
 
-  async deleteAppPassword(userName: string, passwordId: string): Promise<void> {
-    const response = await this.client.post('/deleteAppPassword', { 
+  async deleteAppPassword(userName: string, appPassword: string): Promise<void> {
+    const response = await this.client.post('/deleteAppPassword', {
       userName,
-      passwordId
+      appPassword
     });
     if (response.data.type !== 'success') {
       throw new Error(response.data.message || 'Failed to delete app password');

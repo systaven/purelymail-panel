@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { 
   PlusIcon, 
@@ -608,6 +609,14 @@ function UserCard({
         </div>
 
         <div className="flex items-center gap-2 ml-4">
+          <Link
+            href={{ pathname: '/mail', query: { mailbox: user.userName } }}
+            className="btn-secondary text-sm flex items-center gap-2"
+          >
+            <EnvelopeIcon className="h-4 w-4" />
+            Open mailbox
+          </Link>
+
           <button
             onClick={() => onEdit(user)}
             className="btn-secondary text-sm flex items-center gap-2"

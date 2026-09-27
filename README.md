@@ -1,6 +1,6 @@
 # PurelyMail Management Panel
 
-A comprehensive web-based management panel for the PurelyMail API, built with Next.js and designed for Vercel deployment.
+A comprehensive web-based management panel for the PurelyMail API, built with Next.js. It runs on Vercel, Appwrite Sites (with SSR enabled) or Docker.
 
 ## Features
 
@@ -9,9 +9,10 @@ A comprehensive web-based management panel for the PurelyMail API, built with Ne
 - 📧 **User Management** - Create and manage email users with password reset functionality  
 - 🔀 **Routing Rules** - Configure email routing and forwarding rules
 - ⚙️ **Account Settings** - Manage account information and view usage statistics
+- ✉️ **Webmail** - Read, search, organize and send mail from any mailbox in the account (see [Webmail](#webmail))
 - 🎨 **Modern UI** - Responsive design with Tailwind CSS
 - 🔐 **Secure API** - Server-side API key management
-- ☁️ **Vercel Ready** - Optimized for easy Vercel deployment
+- ☁️ **Deploy anywhere** - Vercel, Appwrite Sites or Docker
 
 ## Tech Stack
 
@@ -26,7 +27,7 @@ A comprehensive web-based management panel for the PurelyMail API, built with Ne
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 22+ (on Appwrite Sites, pick a Node 22 runtime)
 - A PurelyMail account with API access
 - Vercel account (for deployment)
 
@@ -102,15 +103,18 @@ A comprehensive web-based management panel for the PurelyMail API, built with Ne
 │   ├── DomainManagement.tsx  # Domain management interface
 │   ├── RoutingRulesManagement.tsx # Email routing rules
 │   ├── UserManagement.tsx    # User account management
-│   └── AccountSettings.tsx   # Account settings page
+│   ├── AccountSettings.tsx   # Account settings page
+│   └── mail/                 # Webmail UI (folders, message list, reader, composer)
 ├── lib/                  # Utility libraries
-│   └── purelymail.ts        # PurelyMail API client
+│   ├── purelymail.ts        # PurelyMail API client
+│   └── mail/                # IMAP/SMTP access, app password storage, HTML sanitizing
 ├── pages/                # Next.js pages
 │   ├── api/                 # API routes
 │   │   ├── account.ts           # Account management endpoints
 │   │   ├── domains.ts           # Domain management endpoints
 │   │   ├── routing-rules.ts     # Routing rules endpoints
 │   │   ├── users.ts             # User management endpoints
+│   │   ├── mail/                # Webmail endpoints
 │   │   └── users/
 │   │       └── reset-password.ts # Password reset endpoint
 │   ├── _app.tsx             # Next.js app configuration
@@ -118,10 +122,12 @@ A comprehensive web-based management panel for the PurelyMail API, built with Ne
 │   ├── domains.tsx          # Domains page
 │   ├── routing-rules.tsx    # Routing rules page
 │   ├── users.tsx            # Users page
+│   ├── mail.tsx             # Webmail page
 │   └── settings.tsx         # Settings page
 ├── styles/               # Global styles
 │   └── globals.css          # Tailwind CSS and custom styles
-└── public/               # Static assets
+├── supabase/             # SQL for the webmail credentials table
+└── Dockerfile            # Standalone Docker image
 ```
 
 ## API Integration
@@ -158,16 +164,53 @@ The application integrates with the following PurelyMail API endpoints:
 | `PURELYMAIL_API_KEY` | Your PurelyMail API key | Yes |
 | `ADMIN_PASSWORD` | Password used to log in to the panel. A bcrypt hash is recommended (see below); plain text also works. | Yes |
 | `JWT_SECRET` | Random secret for signing session tokens (e.g. `openssl rand -base64 32`). Login fails if it is not set. | Yes |
+| `SUPABASE_URL` | Supabase project URL, for webmail | For webmail |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-side only) | For webmail |
+| `MAIL_CREDENTIALS_KEY` | Random secret that encrypts stored app passwords (e.g. `openssl rand -base64 32`) | For webmail |
+| `MAIL_IMAP_HOST` / `MAIL_IMAP_PORT` / `MAIL_SMTP_HOST` / `MAIL_SMTP_PORT` / `MAIL_SMTP_SECURE` | Override the mail servers (default `imap.purelymail.com:993`, `smtp.purelymail.com:465` with implicit TLS; STARTTLS is used for ports 587 and 25 unless `MAIL_SMTP_SECURE=true`) | No |
 
 ### Using a hashed admin password
 
 Generate a bcrypt hash and use it as `ADMIN_PASSWORD`:
 
 ```bash
-node -e "require('bcrypt').hash(process.argv[1], 12).then(console.log)" 'your-password'
+node -e "require('bcryptjs').hash(process.argv[1], 12).then(console.log)" 'your-password'
 ```
 
 In `.env.local`, escape each `$` in the hash as `\$`, because Next.js expands `$` in env files. In the Vercel dashboard, paste the hash as is.
+
+## Webmail
+
+The **Mail** page lets the admin open any mailbox in the account without knowing its password:
+
+1. The first time a mailbox is opened, the panel creates a PurelyMail **app password** for it through the API (named "PurelyMail Panel webmail").
+2. The app password is encrypted with `MAIL_CREDENTIALS_KEY` (AES-256-GCM) and stored in Supabase, then reused for IMAP and SMTP logins.
+3. **Reset access** on the Mail page deletes the app password in both PurelyMail and Supabase. If a stored password stops working (for example it was deleted in PurelyMail), a new one is created automatically.
+
+The mailbox's owner can see this app password in their PurelyMail settings. If `MAIL_CREDENTIALS_KEY` changes, stored passwords can no longer be decrypted: the panel creates new ones automatically, but the old ones stay in PurelyMail until deleted there.
+
+### Setup
+
+1. In your Supabase project, run [`supabase/mailbox_credentials.sql`](supabase/mailbox_credentials.sql) in the SQL editor.
+2. Set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` and `MAIL_CREDENTIALS_KEY` in your deployment's environment variables.
+
+### Limitations
+
+- New mail is found by polling every 30 seconds while the page is open; there is no push.
+- Each request opens its own IMAP connection, so actions take a moment longer than in a desktop client.
+- Attachments are limited to 10 MB per message when sending. Your host may impose a lower request size limit.
+- Forwarding includes the original text but not its attachments.
+- Messages are composed as plain text.
+- On Appwrite Sites, requests time out after 15 seconds by default. Raising the site timeout (Settings → Timeout, up to 30 seconds) helps with large mailboxes and searches.
+
+## Docker
+
+```bash
+docker build -t purelymail-panel .
+docker run -p 3000:3000 --env-file .env.local purelymail-panel
+```
+
+The image runs Next.js in standalone mode on port 3000. When passing a bcrypt `ADMIN_PASSWORD` through `--env-file`, don't escape the `$` characters (Docker doesn't expand them).
 
 ## Contributing
 

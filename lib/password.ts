@@ -1,10 +1,10 @@
 import { createHash, timingSafeEqual } from 'crypto';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 // Checks a login attempt against ADMIN_PASSWORD.
 // ADMIN_PASSWORD may be a bcrypt hash (recommended) or a plain-text password.
 // Kept separate from lib/auth.ts because middleware runs on the Edge runtime,
-// which cannot load bcrypt or Node's crypto module.
+// which cannot load Node's crypto module.
 export async function verifyAdminPassword(input: string, adminPassword: string): Promise<boolean> {
   if (/^\$2[aby]\$\d{2}\$/.test(adminPassword)) {
     return bcrypt.compare(input, adminPassword);

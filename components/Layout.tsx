@@ -8,6 +8,7 @@ import {
   ArrowPathIcon,
   UsersIcon,
   CogIcon,
+  EnvelopeIcon,
   ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,6 +23,7 @@ const navigation = [
   { name: 'Domains', href: '/domains', icon: GlobeAltIcon },
   { name: 'Routing Rules', href: '/routing-rules', icon: ArrowPathIcon },
   { name: 'Users', href: '/users', icon: UsersIcon },
+  { name: 'Mail', href: '/mail', icon: EnvelopeIcon },
   { name: 'Settings', href: '/settings', icon: CogIcon },
 ];
 

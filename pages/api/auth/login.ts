@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import bcrypt from 'bcrypt';
 import { SignJWT } from 'jose';
+import { AUTH_COOKIE, getJwtSecret } from '@/lib/auth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -19,7 +20,9 @@ export default async function handler(
 
     // Get admin password from environment
     const adminPassword = process.env.ADMIN_PASSWORD;
-    if (!adminPassword) {
+    const secret = getJwtSecret();
+    if (!adminPassword || !secret) {
+      console.error('ADMIN_PASSWORD and JWT_SECRET environment variables must be set');
       return res.status(500).json({ error: 'Server configuration error' });
     }
 
@@ -32,7 +35,6 @@ export default async function handler(
     }
 
     // Create JWT token
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret');
     const token = await new SignJWT({ user: 'admin', authenticated: true })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
@@ -41,7 +43,7 @@ export default async function handler(
 
     // Set secure HTTP-only cookie
     res.setHeader('Set-Cookie', [
-      `auth-token=${token}; HttpOnly; Path=/; Max-Age=${24 * 60 * 60}; SameSite=Strict${
+      `${AUTH_COOKIE}=${token}; HttpOnly; Path=/; Max-Age=${24 * 60 * 60}; SameSite=Strict${
         process.env.NODE_ENV === 'production' ? '; Secure' : ''
       }`
     ]);

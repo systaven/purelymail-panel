@@ -48,9 +48,11 @@ A comprehensive web-based management panel for the PurelyMail API, built with Ne
    cp .env.example .env.local
    ```
    
-   Edit `.env.local` and add your PurelyMail API key:
+   Edit `.env.local` and fill in the required values:
    ```env
    PURELYMAIL_API_KEY=your_actual_api_key_here
+   ADMIN_PASSWORD=choose_a_strong_password
+   JWT_SECRET=output_of_openssl_rand_base64_32
    ```
 
 4. **Run the development server**
@@ -83,7 +85,7 @@ A comprehensive web-based management panel for the PurelyMail API, built with Ne
    
    In your Vercel dashboard:
    - Go to Project Settings → Environment Variables
-   - Add `PURELYMAIL_API_KEY` with your API key value
+   - Add `PURELYMAIL_API_KEY`, `ADMIN_PASSWORD` and `JWT_SECRET` (see [Environment Variables](#environment-variables))
    - Make sure it's available for all environments (Production, Preview, Development)
 
 4. **Deploy**
@@ -154,6 +156,8 @@ The application integrates with the following PurelyMail API endpoints:
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `PURELYMAIL_API_KEY` | Your PurelyMail API key | Yes |
+| `ADMIN_PASSWORD` | Password used to log in to the panel | Yes |
+| `JWT_SECRET` | Random secret for signing session tokens (e.g. `openssl rand -base64 32`). Login fails if it is not set. | Yes |
 
 ## Contributing
 
@@ -167,6 +171,7 @@ The application integrates with the following PurelyMail API endpoints:
 
 - API keys are stored as environment variables and never exposed to the client
 - All API calls are made server-side through Next.js API routes
+- Every `/api/*` route except `/api/auth/*` requires a valid login session (enforced in `middleware.ts`)
 - Input validation is implemented on both client and server sides
 - CORS is handled automatically by Next.js
 

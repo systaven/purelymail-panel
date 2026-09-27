@@ -1,4 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
+import { AUTH_COOKIE } from '@/lib/auth';
 
 export default function handler(
   req: NextApiRequest,
@@ -11,7 +12,7 @@ export default function handler(
   try {
     // Clear the authentication cookie
     res.setHeader('Set-Cookie', [
-      `auth-token=; HttpOnly; Path=/; Max-Age=0; SameSite=Strict${
+      `${AUTH_COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Strict${
         process.env.NODE_ENV === 'production' ? '; Secure' : ''
       }`
     ]);

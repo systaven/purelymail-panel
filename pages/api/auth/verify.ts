@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { jwtVerify } from 'jose';
+import { AUTH_COOKIE, verifyAuthToken } from '@/lib/auth';
 
 export default async function handler(
   req: NextApiRequest,
@@ -10,27 +10,12 @@ export default async function handler(
   }
 
   try {
-    const token = req.cookies['auth-token'];
+    const payload = await verifyAuthToken(req.cookies[AUTH_COOKIE]);
 
-    if (!token) {
-      return res.status(401).json({ authenticated: false });
+    if (payload) {
+      return res.status(200).json({ authenticated: true, user: payload.user });
     }
-
-    // Verify JWT token
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret');
-    
-    try {
-      const { payload } = await jwtVerify(token, secret);
-      
-      if (payload.authenticated) {
-        return res.status(200).json({ authenticated: true, user: payload.user });
-      } else {
-        return res.status(401).json({ authenticated: false });
-      }
-    } catch (jwtError) {
-      // Token is invalid or expired
-      return res.status(401).json({ authenticated: false });
-    }
+    return res.status(401).json({ authenticated: false });
 
   } catch (error) {
     console.error('Verify error:', error);

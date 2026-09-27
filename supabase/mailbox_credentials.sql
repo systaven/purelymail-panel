@@ -12,3 +12,7 @@ create table if not exists public.mailbox_credentials (
 -- server-side by the panel, can read or write this table.
 alter table public.mailbox_credentials enable row level security;
 revoke all on public.mailbox_credentials from anon, authenticated;
+grant select, insert, update, delete on public.mailbox_credentials to service_role;
+
+-- Make the new table visible to the Supabase API right away.
+notify pgrst, 'reload schema';

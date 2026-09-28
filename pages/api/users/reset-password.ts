@@ -8,7 +8,7 @@ export default apiHandler('admin', {
     const mailbox = requireEmail(userName);
     // A recovery address would let the admin reset a private mailbox's password.
     if (await getOwner(mailbox)) {
-      throw new ApiError('This mailbox is private to its owner', 403);
+      throw new ApiError('This mailbox is private to its owner', 403, 'mailbox_private');
     }
     await getPurelyMail().upsertPasswordReset(mailbox, method);
     res.status(200).json({ success: true, message: 'Password reset method configured' });

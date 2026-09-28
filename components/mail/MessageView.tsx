@@ -8,7 +8,10 @@ import {
   TrashIcon,
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
-import { formatAddresses, formatDate, formatSize, mailApi, MailFolder, MessageDetail } from './api';
+import { useLocale, useT } from '@/lib/i18n';
+import { commonMessages } from '@/lib/i18n/messages/common';
+import { mailMessages } from '@/lib/i18n/messages/mail';
+import { folderLabel, formatAddresses, formatDate, formatSize, mailApi, MailFolder, MessageDetail } from './api';
 
 export type ReplyMode = 'reply' | 'replyAll' | 'forward';
 
@@ -56,8 +59,11 @@ export default function MessageView({
   onMove: (target: string) => void;
   onDelete: () => void;
 }) {
+  const t = useT(mailMessages);
+  const tc = useT(commonMessages);
+  const { locale } = useLocale();
   const backButton = (
-    <button className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-800 md:hidden" onClick={onBack} title="Back" aria-label="Back to messages">
+    <button className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-800 md:hidden" onClick={onBack} title={tc('back')} aria-label={t('backToMessages')}>
       <ArrowLeftIcon className="h-5 w-5" />
     </button>
   );
@@ -80,7 +86,7 @@ export default function MessageView({
     return (
       <div className="flex h-full flex-col items-center justify-center text-gray-400">
         <EnvelopeIcon className="mb-2 h-10 w-10" />
-        Select a message to read
+        {t('selectMessageToRead')}
       </div>
     );
   }
@@ -92,53 +98,53 @@ export default function MessageView({
       <div className="max-h-[45%] overflow-y-auto border-b border-gray-200 px-3 py-3 sm:px-5 sm:py-4">
         <div className="mb-3 flex flex-wrap items-center gap-1">
           {backButton}
-          <button className={iconButton} onClick={() => onReply('reply')} title="Reply">
+          <button className={iconButton} onClick={() => onReply('reply')} title={t('reply')}>
             <ArrowUturnLeftIcon className="h-5 w-5" />
           </button>
-          <button className={`${iconButton} text-sm font-medium`} onClick={() => onReply('replyAll')} title="Reply all">
-            <span className="hidden sm:inline">Reply all</span>
-            <span className="sm:hidden">All</span>
+          <button className={`${iconButton} text-sm font-medium`} onClick={() => onReply('replyAll')} title={t('replyAll')}>
+            <span className="hidden sm:inline">{t('replyAll')}</span>
+            <span className="sm:hidden">{t('replyAllShort')}</span>
           </button>
-          <button className={iconButton} onClick={() => onReply('forward')} title="Forward">
+          <button className={iconButton} onClick={() => onReply('forward')} title={t('forward')}>
             <ArrowUturnRightIcon className="h-5 w-5" />
           </button>
           <span className="mx-2 h-5 w-px bg-gray-200" />
-          <button className={iconButton} onClick={onToggleFlag} title={message.flagged ? 'Remove star' : 'Star'}>
+          <button className={iconButton} onClick={onToggleFlag} title={message.flagged ? t('removeStar') : t('star')}>
             {message.flagged ? <StarSolidIcon className="h-5 w-5 text-yellow-400" /> : <StarIcon className="h-5 w-5" />}
           </button>
-          <button className={iconButton} onClick={onMarkUnread} title="Mark as unread">
+          <button className={iconButton} onClick={onMarkUnread} title={t('markAsUnread')}>
             <EnvelopeIcon className="h-5 w-5" />
           </button>
           <select
             className="ml-1 w-28 rounded-md border border-gray-300 py-1 pl-2 pr-8 text-sm text-gray-700 sm:w-auto"
             value=""
             onChange={(e) => e.target.value && onMove(e.target.value)}
-            title="Move to folder"
+            title={t('moveToFolder')}
           >
-            <option value="">Move to...</option>
+            <option value="">{t('moveTo')}</option>
             {folders.filter((f) => f.path !== folder).map((f) => (
-              <option key={f.path} value={f.path}>{f.name}</option>
+              <option key={f.path} value={f.path}>{folderLabel(f, t)}</option>
             ))}
           </select>
-          <button className={`${iconButton} ml-auto hover:text-red-600`} onClick={onDelete} title="Delete">
+          <button className={`${iconButton} ml-auto hover:text-red-600`} onClick={onDelete} title={tc('delete')}>
             <TrashIcon className="h-5 w-5" />
           </button>
         </div>
 
         <h2 className="break-words text-lg font-semibold text-gray-900 sm:text-xl">{message.subject}</h2>
         <dl className="mt-2 grid grid-cols-[auto,1fr] gap-x-3 gap-y-0.5 break-words text-sm [&_dd]:min-w-0">
-          <dt className="text-gray-500">From</dt>
+          <dt className="text-gray-500">{t('headerFrom')}</dt>
           <dd className="text-gray-900">{formatAddresses(message.from)}</dd>
-          <dt className="text-gray-500">To</dt>
+          <dt className="text-gray-500">{t('headerTo')}</dt>
           <dd className="text-gray-700">{formatAddresses(message.to)}</dd>
           {message.cc.length > 0 && (
             <>
-              <dt className="text-gray-500">Cc</dt>
+              <dt className="text-gray-500">{t('headerCc')}</dt>
               <dd className="text-gray-700">{formatAddresses(message.cc)}</dd>
             </>
           )}
-          <dt className="text-gray-500">Date</dt>
-          <dd className="text-gray-700">{formatDate(message.date, true)}</dd>
+          <dt className="text-gray-500">{t('headerDate')}</dt>
+          <dd className="text-gray-700">{formatDate(message.date, locale, true)}</dd>
         </dl>
 
         {message.attachments.length > 0 && (
@@ -151,7 +157,7 @@ export default function MessageView({
               >
                 <PaperClipIcon className="h-4 w-4" />
                 {a.filename}
-                <span className="text-gray-400">({formatSize(a.size)})</span>
+                <span className="text-gray-400">({formatSize(a.size, locale)})</span>
               </a>
             ))}
           </div>
@@ -159,8 +165,8 @@ export default function MessageView({
 
         {message.blockedImages > 0 && !showImages && (
           <div className="mt-3 flex items-center justify-between rounded-md bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
-            Remote images were blocked to protect your privacy.
-            <button onClick={onShowImages} className="font-medium underline">Show images</button>
+            {t('imagesBlocked')}
+            <button onClick={onShowImages} className="font-medium underline">{t('showImages')}</button>
           </div>
         )}
       </div>
@@ -169,7 +175,7 @@ export default function MessageView({
         {message.html ? (
           // Most HTML mail assumes a light background, so it stays white in dark mode.
           <iframe
-            title="Message body"
+            title={t('messageBody')}
             className="h-full w-full bg-white"
             sandbox="allow-popups allow-popups-to-escape-sandbox"
             srcDoc={buildSrcDoc(message.html, showImages)}

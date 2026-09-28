@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { PlusIcon } from '@heroicons/react/24/outline';
+import { useT } from '@/lib/i18n';
+import { dashboardMessages } from '@/lib/i18n/messages/dashboard';
 
 interface StatsCardProps {
   title: string;
@@ -53,13 +55,14 @@ function QuickActionCard({ title, description, href, icon: Icon }: QuickAction) 
 }
 
 export default function DashboardOverview() {
+  const t = useT(dashboardMessages);
   const [stats, setStats] = useState({
     domains: 0,
     users: 0,
     routingRules: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -87,7 +90,7 @@ export default function DashboardOverview() {
       });
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
-      setError('Failed to load dashboard data');
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -95,20 +98,20 @@ export default function DashboardOverview() {
 
   const quickActions: QuickAction[] = [
     {
-      title: 'Add Domain',
-      description: 'Register a new domain for email hosting',
+      title: t('addDomain'),
+      description: t('addDomainDesc'),
       href: '/domains',
       icon: PlusIcon,
     },
     {
-      title: 'Create User',
-      description: 'Add a new email user to your domain',
+      title: t('createUser'),
+      description: t('createUserDesc'),
       href: '/users',
       icon: PlusIcon,
     },
     {
-      title: 'Setup Routing',
-      description: 'Configure email routing rules',
+      title: t('setupRouting'),
+      description: t('setupRoutingDesc'),
       href: '/routing-rules',
       icon: PlusIcon,
     },
@@ -117,7 +120,7 @@ export default function DashboardOverview() {
   if (error) {
     return (
       <div className="rounded-md bg-red-50 p-4">
-        <div className="text-red-700">{error}</div>
+        <div className="text-red-700">{t('loadFailed')}</div>
       </div>
     );
   }
@@ -126,25 +129,25 @@ export default function DashboardOverview() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
         <p className="mt-2 text-gray-600">
-          Welcome to your PurelyMail management panel
+          {t('welcome')}
         </p>
       </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <StatsCard title="Domains" value={stats.domains} loading={loading} />
-        <StatsCard title="Users" value={stats.users} loading={loading} />
-        <StatsCard title="Routing Rules" value={stats.routingRules} loading={loading} />
+        <StatsCard title={t('statDomains')} value={stats.domains} loading={loading} />
+        <StatsCard title={t('statUsers')} value={stats.users} loading={loading} />
+        <StatsCard title={t('statRoutingRules')} value={stats.routingRules} loading={loading} />
       </div>
 
       {/* Quick Actions */}
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">{t('quickActions')}</h2>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {quickActions.map((action) => (
-            <QuickActionCard key={action.title} {...action} />
+            <QuickActionCard key={action.href} {...action} />
           ))}
         </div>
       </div>

@@ -33,12 +33,12 @@ export default apiHandler('user', {
     const mailbox = await requireMailbox(session, req.body?.mailbox);
     const { targets, keepCopy } = req.body || {};
     if (!Array.isArray(targets) || targets.length === 0 || targets.length > MAX_TARGETS) {
-      throw new ApiError(`Enter 1 to ${MAX_TARGETS} forwarding addresses`, 400);
+      throw new ApiError(`Enter 1 to ${MAX_TARGETS} forwarding addresses`, 400, 'forwarding_count', { max: MAX_TARGETS });
     }
     const addresses = Array.from(new Set(targets.map((t: unknown) => requireEmail(t, 'forwarding address'))))
       .filter((a) => a !== mailbox);
     if (addresses.length === 0) {
-      throw new ApiError('Forward to an address other than this mailbox', 400);
+      throw new ApiError('Forward to an address other than this mailbox', 400, 'forwarding_self');
     }
     const api = getPurelyMail();
     // PurelyMail allows only one rule per address, so replace any existing one.

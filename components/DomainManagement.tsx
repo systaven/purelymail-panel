@@ -11,6 +11,11 @@ import {
   Cog6ToothIcon
 } from '@heroicons/react/24/outline';
 import { Domain } from '@/lib/purelymail';
+import { apiFetch } from '@/lib/client-api';
+import { useT } from '@/lib/i18n';
+import { commonMessages } from '@/lib/i18n/messages/common';
+import { domainMessages } from '@/lib/i18n/messages/domains';
+import { useErrorText } from '@/lib/i18n/useErrorText';
 
 interface DomainFormData {
   domainName: string;
@@ -23,31 +28,24 @@ interface DomainListProps {
 function AddDomainForm({ onSuccess }: { onSuccess: () => void }) {
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<DomainFormData>();
   const [error, setError] = useState<string | null>(null);
+  const t = useT(domainMessages);
+  const errorText = useErrorText();
 
   const onSubmit = async (data: DomainFormData) => {
     try {
       setError(null);
-      const response = await fetch('/api/domains', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add domain');
-      }
+      await apiFetch('/api/domains', 'POST', data);
 
       reset();
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add domain');
+      setError(errorText(err));
     }
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="card">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Domain</h3>
+      <h3 className="text-lg font-medium text-gray-900 mb-4">{t('addTitle')}</h3>
       
       {error && (
         <div className="mb-4 rounded-md bg-red-50 p-4">
@@ -58,7 +56,7 @@ function AddDomainForm({ onSuccess }: { onSuccess: () => void }) {
       <div className="flex gap-4">
         <div className="min-w-0 flex-1">
           <label htmlFor="domainName" className="form-label">
-            Domain Name
+            {t('domainName')}
           </label>
           <input
             type="text"
@@ -66,10 +64,10 @@ function AddDomainForm({ onSuccess }: { onSuccess: () => void }) {
             placeholder="example.com"
             className="form-input"
             {...register('domainName', {
-              required: 'Domain name is required',
+              required: t('domainRequired'),
               pattern: {
                 value: /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+$/,
-                message: 'Please enter a valid domain name',
+                message: t('domainInvalid'),
               },
             })}
           />
@@ -85,7 +83,7 @@ function AddDomainForm({ onSuccess }: { onSuccess: () => void }) {
             className="btn-primary flex items-center gap-2"
           >
             <PlusIcon className="h-4 w-4" />
-            {isSubmitting ? 'Adding...' : 'Add Domain'}
+            {isSubmitting ? t('adding') : t('addDomain')}
           </button>
         </div>
       </div>
@@ -96,9 +94,11 @@ function AddDomainForm({ onSuccess }: { onSuccess: () => void }) {
 function DomainCard({ domain, onDelete }: { domain: Domain; onDelete: (name: string) => void }) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
+  const t = useT(domainMessages);
+  const tc = useT(commonMessages);
 
   const handleDelete = async () => {
-    if (!confirm(`Are you sure you want to delete ${domain.name}?`)) {
+    if (!confirm(t('confirmDelete', { name: domain.name }))) {
       return;
     }
 
@@ -113,12 +113,12 @@ function DomainCard({ domain, onDelete }: { domain: Domain; onDelete: (name: str
   const getDnsStatus = (passes: boolean) => {
     return passes ? {
       icon: CheckCircleIcon,
-      text: '✓ Configured',
+      text: t('dnsConfiguredBadge'),
       color: 'text-green-600',
       bgColor: 'bg-green-100',
     } : {
       icon: XCircleIcon,
-      text: '✗ Missing',
+      text: t('dnsMissingBadge'),
       color: 'text-red-600',
       bgColor: 'bg-red-100',
     };
@@ -142,12 +142,12 @@ function DomainCard({ domain, onDelete }: { domain: Domain; onDelete: (name: str
               {overallStatus === 'verified' ? (
                 <>
                   <CheckCircleIcon className="h-3 w-3" />
-                  Verified
+                  {t('verified')}
                 </>
               ) : (
                 <>
                   <ClockIcon className="h-3 w-3" />
-                  Pending Setup
+                  {t('pendingSetup')}
                 </>
               )}
             </span>
@@ -155,7 +155,7 @@ function DomainCard({ domain, onDelete }: { domain: Domain; onDelete: (name: str
             {domain.isShared && (
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                 <ShieldCheckIcon className="h-3 w-3" />
-                Shared Domain
+                {t('sharedDomain')}
               </span>
             )}
           </div>
@@ -164,12 +164,12 @@ function DomainCard({ domain, onDelete }: { domain: Domain; onDelete: (name: str
           <div className="flex flex-wrap gap-2 mb-3">
             {domain.allowAccountReset && (
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                Account Reset Enabled
+                {t('accountResetEnabled')}
               </span>
             )}
             {domain.symbolicSubaddressing && (
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                Symbolic Subaddressing
+                {t('symbolicSubaddressing')}
               </span>
             )}
           </div>
@@ -178,28 +178,28 @@ function DomainCard({ domain, onDelete }: { domain: Domain; onDelete: (name: str
           {domain.dnsSummary && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
               <div className="text-center">
-                <div className="text-xs font-medium text-gray-500 mb-1">MX Record</div>
+                <div className="text-xs font-medium text-gray-500 mb-1">{t('mxRecord')}</div>
                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getDnsStatus(domain.dnsSummary.passesMx).bgColor} ${getDnsStatus(domain.dnsSummary.passesMx).color}`}>
                   {getDnsStatus(domain.dnsSummary.passesMx).text}
                 </span>
               </div>
               
               <div className="text-center">
-                <div className="text-xs font-medium text-gray-500 mb-1">SPF Record</div>
+                <div className="text-xs font-medium text-gray-500 mb-1">{t('spfRecord')}</div>
                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getDnsStatus(domain.dnsSummary.passesSpf).bgColor} ${getDnsStatus(domain.dnsSummary.passesSpf).color}`}>
                   {getDnsStatus(domain.dnsSummary.passesSpf).text}
                 </span>
               </div>
               
               <div className="text-center">
-                <div className="text-xs font-medium text-gray-500 mb-1">DKIM Record</div>
+                <div className="text-xs font-medium text-gray-500 mb-1">{t('dkimRecord')}</div>
                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getDnsStatus(domain.dnsSummary.passesDkim).bgColor} ${getDnsStatus(domain.dnsSummary.passesDkim).color}`}>
                   {getDnsStatus(domain.dnsSummary.passesDkim).text}
                 </span>
               </div>
               
               <div className="text-center">
-                <div className="text-xs font-medium text-gray-500 mb-1">DMARC Record</div>
+                <div className="text-xs font-medium text-gray-500 mb-1">{t('dmarcRecord')}</div>
                 <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getDnsStatus(domain.dnsSummary.passesDmarc).bgColor} ${getDnsStatus(domain.dnsSummary.passesDmarc).color}`}>
                   {getDnsStatus(domain.dnsSummary.passesDmarc).text}
                 </span>
@@ -209,7 +209,7 @@ function DomainCard({ domain, onDelete }: { domain: Domain; onDelete: (name: str
 
           {/* Legacy Info */}
           <div className="text-sm text-gray-600">
-            <p>Users: {domain.users?.length || 0} • Aliases: {domain.aliases?.length || 0}</p>
+            <p>{t('counts', { users: domain.users?.length || 0, aliases: domain.aliases?.length || 0 })}</p>
           </div>
         </div>
 
@@ -219,7 +219,7 @@ function DomainCard({ domain, onDelete }: { domain: Domain; onDelete: (name: str
             className="btn-secondary text-sm flex items-center gap-2"
           >
             <Cog6ToothIcon className="h-4 w-4" />
-            {showDetails ? 'Hide' : 'Details'}
+            {showDetails ? t('hide') : t('details')}
           </button>
           
           <button
@@ -228,7 +228,7 @@ function DomainCard({ domain, onDelete }: { domain: Domain; onDelete: (name: str
             className="btn-danger text-sm flex items-center gap-2"
           >
             <TrashIcon className="h-4 w-4" />
-            {isDeleting ? 'Deleting...' : 'Delete'}
+            {isDeleting ? tc('deleting') : tc('delete')}
           </button>
         </div>
       </div>
@@ -236,61 +236,61 @@ function DomainCard({ domain, onDelete }: { domain: Domain; onDelete: (name: str
       {/* Detailed Information Panel */}
       {showDetails && (
         <div className="mt-4 pt-4 border-t border-gray-200">
-          <h4 className="text-sm font-medium text-gray-900 mb-3">Domain Configuration</h4>
+          <h4 className="text-sm font-medium text-gray-900 mb-3">{t('configuration')}</h4>
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
               <div>
-                <span className="font-medium text-gray-700">Domain Type:</span>
+                <span className="font-medium text-gray-700">{t('domainType')}</span>
                 <span className="ml-2 text-gray-600">
-                  {domain.isShared ? 'Shared (PurelyMail)' : 'Private'}
+                  {domain.isShared ? t('typeShared') : t('typePrivate')}
                 </span>
               </div>
               <div>
-                <span className="font-medium text-gray-700">Account Reset:</span>
+                <span className="font-medium text-gray-700">{t('accountReset')}</span>
                 <span className="ml-2 text-gray-600">
-                  {domain.allowAccountReset ? 'Enabled' : 'Disabled'}
+                  {domain.allowAccountReset ? t('enabled') : t('disabled')}
                 </span>
               </div>
               <div>
-                <span className="font-medium text-gray-700">Symbolic Subaddressing:</span>
+                <span className="font-medium text-gray-700">{t('symbolicSubaddressingLabel')}</span>
                 <span className="ml-2 text-gray-600">
-                  {domain.symbolicSubaddressing ? 'Enabled' : 'Disabled'}
+                  {domain.symbolicSubaddressing ? t('enabled') : t('disabled')}
                 </span>
               </div>
               <div>
-                <span className="font-medium text-gray-700">Overall Status:</span>
+                <span className="font-medium text-gray-700">{t('overallStatus')}</span>
                 <span className="ml-2 text-gray-600">
-                  {overallStatus === 'verified' ? 'Fully Configured' : 'Needs DNS Setup'}
+                  {overallStatus === 'verified' ? t('fullyConfigured') : t('needsDns')}
                 </span>
               </div>
             </div>
 
             {domain.dnsSummary && (
               <div className="mt-4">
-                <h5 className="text-sm font-medium text-gray-700 mb-2">DNS Records Status</h5>
+                <h5 className="text-sm font-medium text-gray-700 mb-2">{t('dnsStatus')}</h5>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span>MX (Mail Exchange):</span>
+                    <span>{t('mxLong')}</span>
                     <span className={domain.dnsSummary.passesMx ? 'text-green-600' : 'text-red-600'}>
-                      {domain.dnsSummary.passesMx ? 'Configured' : 'Missing/Incorrect'}
+                      {domain.dnsSummary.passesMx ? t('configured') : t('missing')}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span>SPF (Sender Policy Framework):</span>
+                    <span>{t('spfLong')}</span>
                     <span className={domain.dnsSummary.passesSpf ? 'text-green-600' : 'text-red-600'}>
-                      {domain.dnsSummary.passesSpf ? 'Configured' : 'Missing/Incorrect'}
+                      {domain.dnsSummary.passesSpf ? t('configured') : t('missing')}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span>DKIM (DomainKeys):</span>
+                    <span>{t('dkimLong')}</span>
                     <span className={domain.dnsSummary.passesDkim ? 'text-green-600' : 'text-red-600'}>
-                      {domain.dnsSummary.passesDkim ? 'Configured' : 'Missing/Incorrect'}
+                      {domain.dnsSummary.passesDkim ? t('configured') : t('missing')}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span>DMARC (Domain-based Message Authentication):</span>
+                    <span>{t('dmarcLong')}</span>
                     <span className={domain.dnsSummary.passesDmarc ? 'text-green-600' : 'text-red-600'}>
-                      {domain.dnsSummary.passesDmarc ? 'Configured' : 'Missing/Incorrect'}
+                      {domain.dnsSummary.passesDmarc ? t('configured') : t('missing')}
                     </span>
                   </div>
                 </div>
@@ -307,6 +307,9 @@ export default function DomainManagement() {
   const [domains, setDomains] = useState<Domain[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const t = useT(domainMessages);
+  const tc = useT(commonMessages);
+  const errorText = useErrorText();
 
   useEffect(() => {
     fetchDomains();
@@ -317,17 +320,11 @@ export default function DomainManagement() {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('/api/domains');
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch domains');
-      }
-
-      const data = await response.json();
+      const data = await apiFetch<Domain[]>('/api/domains');
       setDomains(data);
     } catch (err) {
       console.error('Failed to fetch domains:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load domains');
+      setError(errorText(err));
     } finally {
       setLoading(false);
     }
@@ -335,20 +332,11 @@ export default function DomainManagement() {
 
   const handleDeleteDomain = async (domainName: string) => {
     try {
-      const response = await fetch('/api/domains', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ domainName }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete domain');
-      }
+      await apiFetch('/api/domains', 'DELETE', { domainName });
 
       await fetchDomains(); // Refresh the list
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete domain');
+      alert(errorText(err));
     }
   };
 
@@ -378,7 +366,7 @@ export default function DomainManagement() {
           onClick={fetchDomains}
           className="mt-2 btn-primary"
         >
-          Retry
+          {tc('retry')}
         </button>
       </div>
     );
@@ -387,9 +375,9 @@ export default function DomainManagement() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Domain Management</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
         <p className="mt-2 text-gray-600">
-          Manage your email domains and their settings
+          {t('subtitle')}
         </p>
       </div>
 
@@ -397,14 +385,14 @@ export default function DomainManagement() {
 
       <div className="space-y-4">
         <h2 className="text-xl font-semibold text-gray-900">
-          Your Domains ({domains.length})
+          {t('yourDomains', { count: domains.length })}
         </h2>
         
         {domains.length === 0 ? (
           <div className="card text-center py-12">
             <div className="text-gray-500">
-              <p className="text-lg">No domains configured yet</p>
-              <p className="text-sm mt-1">Add your first domain to get started</p>
+              <p className="text-lg">{t('empty')}</p>
+              <p className="text-sm mt-1">{t('emptyHint')}</p>
             </div>
           </div>
         ) : (

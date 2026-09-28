@@ -22,7 +22,7 @@ export default apiHandler('admin', {
   POST: async (req, res) => {
     const { domainName, matchUser, prefix, catchall, targetAddresses } = req.body || {};
     if (!Array.isArray(targetAddresses) || targetAddresses.length === 0) {
-      throw new ApiError('At least one target address is required', 400);
+      throw new ApiError('At least one target address is required', 400, 'rule_needs_target');
     }
     const rule = {
       domainName: requireString(domainName, 'domain').toLowerCase(),
@@ -34,7 +34,7 @@ export default apiHandler('admin', {
     // Don't let a rule divert mail addressed to someone's private mailbox.
     const hit = (await privateMailboxes()).find((m) => interceptingRules([{ ...rule, id: 0 }], m).length > 0);
     if (hit) {
-      throw new ApiError(`This rule would redirect mail for ${hit}, which is private to its owner`, 403);
+      throw new ApiError(`This rule would redirect mail for ${hit}, which is private to its owner`, 403, 'rule_intercepts_private', { address: hit });
     }
     await getPurelyMail().addRoutingRule(rule);
     res.status(200).json({ success: true });

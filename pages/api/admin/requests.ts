@@ -11,8 +11,8 @@ export default apiHandler('admin', {
   // { id, decision: 'approve' | 'reject', note? }
   POST: async (req, res, session) => {
     const request = await getRequest(requireString(req.body?.id, 'request id'));
-    if (!request) throw new ApiError('Request not found', 404);
-    if (request.status !== 'pending') throw new ApiError('This request was already handled', 400);
+    if (!request) throw new ApiError('Request not found', 404, 'request_not_found');
+    if (request.status !== 'pending') throw new ApiError('This request was already handled', 400, 'request_handled');
     const decision = req.body?.decision;
     if (decision !== 'approve' && decision !== 'reject') throw new ApiError('Invalid decision', 400);
     const note = typeof req.body?.note === 'string' ? req.body.note.trim().slice(0, 500) || null : null;

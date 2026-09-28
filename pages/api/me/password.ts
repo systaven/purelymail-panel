@@ -10,7 +10,7 @@ export default apiHandler('user', {
     const mailbox = await requireMailbox(session, req.body?.mailbox);
     const password = req.body?.password;
     if (typeof password !== 'string' || password.length < 10 || password.length > 128) {
-      throw new ApiError('Password must be 10 to 128 characters', 400);
+      throw new ApiError('Password must be 10 to 128 characters', 400, 'password_length');
     }
     await getPurelyMail().modifyUser({ userName: mailbox, password });
     await audit(session.actor, 'mailbox.password', mailbox);

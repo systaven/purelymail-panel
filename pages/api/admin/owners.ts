@@ -11,14 +11,14 @@ export default apiHandler('admin', {
     const mailbox = requireEmail(req.body?.mailbox);
     const ownerId = requireString(req.body?.clerk_user_id, 'user');
     if (!(await getUser(ownerId))) {
-      throw new ApiError('User not found', 404);
+      throw new ApiError('User not found', 404, 'user_not_found');
     }
     if (await getOwner(mailbox)) {
-      throw new ApiError('This mailbox already belongs to someone; it can only be deleted', 409);
+      throw new ApiError('This mailbox already belongs to someone; it can only be deleted', 409, 'mailbox_owned');
     }
     const names = await getPurelyMail().listUserNames();
     if (!names.some((n) => n.toLowerCase() === mailbox)) {
-      throw new ApiError(`${mailbox} doesn't exist`, 404);
+      throw new ApiError(`${mailbox} doesn't exist`, 404, 'mailbox_missing', { address: mailbox });
     }
     await handOverMailbox(mailbox, ownerId, session.actor);
     res.status(200).json({ success: true });

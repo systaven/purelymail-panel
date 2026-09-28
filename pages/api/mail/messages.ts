@@ -21,7 +21,7 @@ export default mailHandler({
       throw new MailError('Invalid action', 400);
     }
     if (!Array.isArray(uids) || uids.length === 0) {
-      throw new MailError('No messages selected', 400);
+      throw new MailError('No messages selected', 400, 'no_messages_selected');
     }
     await applyAction(
       await openMailbox(session, mailbox, req, res),

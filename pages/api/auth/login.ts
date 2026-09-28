@@ -15,7 +15,7 @@ export default async function handler(
     const { password } = req.body;
 
     if (typeof password !== 'string' || !password) {
-      return res.status(400).json({ error: 'Password is required' });
+      return res.status(400).json({ error: 'Password is required', code: 'password_required' });
     }
 
     // Get admin password from environment
@@ -23,13 +23,13 @@ export default async function handler(
     const secret = getJwtSecret();
     if (!adminPassword || !secret) {
       console.error('ADMIN_PASSWORD and JWT_SECRET environment variables must be set');
-      return res.status(500).json({ error: 'Server configuration error' });
+      return res.status(500).json({ error: 'Server configuration error', code: 'server_misconfigured' });
     }
 
     const isValid = await verifyAdminPassword(password, adminPassword);
 
     if (!isValid) {
-      return res.status(401).json({ error: 'Invalid password' });
+      return res.status(401).json({ error: 'Invalid password', code: 'invalid_password' });
     }
 
     // Create JWT token
@@ -53,6 +53,6 @@ export default async function handler(
 
   } catch (error) {
     console.error('Login error:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error', code: 'request_failed' });
   }
 }

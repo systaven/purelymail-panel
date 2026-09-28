@@ -18,10 +18,10 @@ async function checkAccess(session: Session, mailbox: string): Promise<string | 
   const owner = await getOwner(mailbox);
   if (owner) {
     if (owner !== session.clerkUserId) {
-      throw new ApiError('This mailbox is private to its owner', 403);
+      throw new ApiError('This mailbox is private to its owner', 403, 'mailbox_private');
     }
   } else if (session.role !== 'admin') {
-    throw new ApiError('You do not have access to this mailbox', 403);
+    throw new ApiError('You do not have access to this mailbox', 403, 'no_mailbox_access');
   }
   return owner;
 }

@@ -46,16 +46,16 @@ export function checkNewAddress(localPart: unknown, domain: unknown, usage: Usag
   const local = String(localPart ?? '').trim().toLowerCase();
   const dom = String(domain ?? '').trim().toLowerCase();
   if (!LOCAL_PART_RE.test(local) || local.includes('..')) {
-    throw new ApiError('Use 1-64 letters, digits, dots, hyphens or underscores, starting and ending with a letter or digit', 400);
+    throw new ApiError('Use 1-64 letters, digits, dots, hyphens or underscores, starting and ending with a letter or digit', 400, 'invalid_local_part');
   }
   if (RESERVED_LOCAL_PARTS.has(local)) {
-    throw new ApiError(`"${local}" is reserved`, 400);
+    throw new ApiError(`"${local}" is reserved`, 400, 'reserved_address', { name: local });
   }
   if (!usage.limits.allowedDomains.includes(dom)) {
-    throw new ApiError(`You can't create mailboxes on ${dom || 'that domain'}`, 403);
+    throw new ApiError(`You can't create mailboxes on ${dom || 'that domain'}`, 403, 'domain_not_allowed', { domain: dom });
   }
   if (usage.owned.length + usage.pendingRequests >= usage.limits.maxMailboxes) {
-    throw new ApiError(`You've reached your limit of ${usage.limits.maxMailboxes} mailbox(es)`, 403);
+    throw new ApiError(`You've reached your limit of ${usage.limits.maxMailboxes} mailbox(es)`, 403, 'quota_reached', { limit: usage.limits.maxMailboxes });
   }
   return `${local}@${dom}`;
 }
@@ -85,7 +85,7 @@ async function assertNotIntercepted(address: string): Promise<RoutingRule[]> {
   const broad = interceptingRules(rules, address).filter((r) => r.prefix);
   if (broad.length) {
     const r = broad[0];
-    throw new ApiError(`${address} is covered by the routing rule for ${r.matchUser}*@${r.domainName}; change that rule first`, 409);
+    throw new ApiError(`${address} is covered by the routing rule for ${r.matchUser}*@${r.domainName}; change that rule first`, 409, 'address_covered', { address, rule: `${r.matchUser}*@${r.domainName}` });
   }
   return exactRules(rules, address);
 }
@@ -115,10 +115,10 @@ export async function handOverMailbox(address: string, ownerId: string, actor: s
 export async function createMailboxFor(ownerId: string, address: string, actor: string): Promise<void> {
   const existing = await getPurelyMail().listUserNames();
   if (existing.some((name) => name.toLowerCase() === address)) {
-    throw new ApiError(`${address} already exists`, 409);
+    throw new ApiError(`${address} already exists`, 409, 'address_exists', { address });
   }
   if ((await assertNotIntercepted(address)).length) {
-    throw new ApiError(`${address} has a routing rule; remove it first`, 409);
+    throw new ApiError(`${address} has a routing rule; remove it first`, 409, 'address_has_rule', { address });
   }
   await getPurelyMail().createUser({
     userName: address,

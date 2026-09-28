@@ -8,7 +8,7 @@ export default apiHandler('user', {
   // request for the admin if this user needs approval.
   POST: async (req, res, session) => {
     if (!session.user) {
-      throw new ApiError('Create mailboxes for the account on the Users page', 400);
+      throw new ApiError('Create mailboxes for the account on the Users page', 400, 'use_users_page');
     }
     const usage = await getUsage(session.user);
     const address = checkNewAddress(req.body?.localPart, req.body?.domain, usage);

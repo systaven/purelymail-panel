@@ -1,5 +1,8 @@
 import { ChevronLeftIcon, ChevronRightIcon, PaperClipIcon } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
+import { useLocale, useT } from '@/lib/i18n';
+import { commonMessages } from '@/lib/i18n/messages/common';
+import { mailMessages } from '@/lib/i18n/messages/mail';
 import { displayName, formatDate, MessageAction, MessageList } from './api';
 
 export default function MessageListPane({
@@ -27,6 +30,9 @@ export default function MessageListPane({
   onBulkAction: (action: MessageAction) => void;
   onPage: (page: number) => void;
 }) {
+  const t = useT(mailMessages);
+  const tc = useT(commonMessages);
+  const { locale } = useLocale();
   const messages = list?.messages || [];
   const allChecked = messages.length > 0 && messages.every((m) => checked.has(m.uid));
   const pageCount = list ? Math.max(1, Math.ceil(list.total / list.pageSize)) : 1;
@@ -39,26 +45,26 @@ export default function MessageListPane({
           className="rounded border-gray-300"
           checked={allChecked}
           onChange={(e) => onCheckAll(e.target.checked)}
-          aria-label="Select all"
+          aria-label={t('selectAll')}
         />
         {checked.size > 0 ? (
           <div className="flex items-center gap-1">
-            <span className="mr-1 text-gray-600">{checked.size} selected</span>
-            <button className="rounded px-2 py-1 hover:bg-gray-100" onClick={() => onBulkAction('seen')}>Read</button>
-            <button className="rounded px-2 py-1 hover:bg-gray-100" onClick={() => onBulkAction('unseen')}>Unread</button>
-            <button className="rounded px-2 py-1 hover:bg-gray-100" onClick={() => onBulkAction('flag')}>Star</button>
-            <button className="rounded px-2 py-1 text-red-600 hover:bg-red-50" onClick={() => onBulkAction('delete')}>Delete</button>
+            <span className="mr-1 text-gray-600">{t('selectedCount', { n: checked.size })}</span>
+            <button className="rounded px-2 py-1 hover:bg-gray-100" onClick={() => onBulkAction('seen')}>{t('markRead')}</button>
+            <button className="rounded px-2 py-1 hover:bg-gray-100" onClick={() => onBulkAction('unseen')}>{t('markUnread')}</button>
+            <button className="rounded px-2 py-1 hover:bg-gray-100" onClick={() => onBulkAction('flag')}>{t('star')}</button>
+            <button className="rounded px-2 py-1 text-red-600 hover:bg-red-50" onClick={() => onBulkAction('delete')}>{tc('delete')}</button>
           </div>
         ) : (
-          <span className="text-gray-500">{list ? `${list.total} messages` : ''}</span>
+          <span className="text-gray-500">{list ? t('messageCount', { n: list.total }) : ''}</span>
         )}
         {list && pageCount > 1 && (
           <div className="ml-auto flex items-center gap-1 text-gray-600">
-            <button disabled={list.page === 0} onClick={() => onPage(list.page - 1)} className="rounded p-1 hover:bg-gray-100 disabled:opacity-30" aria-label="Newer">
+            <button disabled={list.page === 0} onClick={() => onPage(list.page - 1)} className="rounded p-1 hover:bg-gray-100 disabled:opacity-30" aria-label={t('newer')}>
               <ChevronLeftIcon className="h-4 w-4" />
             </button>
             {list.page + 1}/{pageCount}
-            <button disabled={list.page + 1 >= pageCount} onClick={() => onPage(list.page + 1)} className="rounded p-1 hover:bg-gray-100 disabled:opacity-30" aria-label="Older">
+            <button disabled={list.page + 1 >= pageCount} onClick={() => onPage(list.page + 1)} className="rounded p-1 hover:bg-gray-100 disabled:opacity-30" aria-label={t('older')}>
               <ChevronRightIcon className="h-4 w-4" />
             </button>
           </div>
@@ -78,11 +84,11 @@ export default function MessageListPane({
           </div>
         )}
         {list && messages.length === 0 && !error && (
-          <div className="p-6 text-center text-sm text-gray-500">No messages</div>
+          <div className="p-6 text-center text-sm text-gray-500">{t('noMessages')}</div>
         )}
         <ul>
           {messages.map((m) => {
-            const who = displayName(isSentFolder ? m.to : m.from) || '(unknown)';
+            const who = displayName(isSentFolder ? m.to : m.from) || t('unknown');
             const active = m.uid === selectedUid;
             return (
               <li
@@ -98,15 +104,15 @@ export default function MessageListPane({
                   checked={checked.has(m.uid)}
                   onClick={(e) => e.stopPropagation()}
                   onChange={(e) => onCheck(m.uid, e.target.checked)}
-                  aria-label="Select message"
+                  aria-label={t('selectMessage')}
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     {!m.seen && <span className="h-2 w-2 shrink-0 rounded-full bg-primary-600" />}
                     <span className={`truncate text-sm ${m.seen ? 'text-gray-700' : 'font-semibold text-gray-900'}`}>
-                      {isSentFolder ? `To: ${who}` : who}
+                      {isSentFolder ? t('toName', { name: who }) : who}
                     </span>
-                    <span className="ml-auto shrink-0 text-xs text-gray-500">{formatDate(m.date)}</span>
+                    <span className="ml-auto shrink-0 text-xs text-gray-500">{formatDate(m.date, locale)}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <span className={`truncate text-sm ${m.seen ? 'text-gray-600' : 'font-medium text-gray-800'}`}>

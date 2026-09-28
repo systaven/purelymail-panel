@@ -3,12 +3,19 @@ import { useRouter } from 'next/router';
 import { LockClosedIcon } from '@heroicons/react/24/outline';
 import { SignInButton, SignUpButton } from '@clerk/nextjs';
 import { clerkConfigured } from '@/lib/clerk-client';
+import { ApiClientError, apiFetch } from '@/lib/client-api';
+import { useT } from '@/lib/i18n';
+import { useErrorText } from '@/lib/i18n/useErrorText';
+import { loginMessages } from '@/lib/i18n/messages/login';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const t = useT(loginMessages);
+  const errorText = useErrorText();
 
   // Check if user is already authenticated
   useEffect(() => {
@@ -35,55 +42,47 @@ export default function Login() {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ password }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        // Redirect to dashboard
-        router.push('/');
-      } else {
-        setError(data.error || 'Login failed');
-      }
+      await apiFetch('/api/auth/login', 'POST', { password });
+      // Redirect to dashboard
+      router.push('/');
     } catch (error) {
-      setError('Network error. Please try again.');
+      if (error instanceof ApiClientError && error.status === 401 && !error.code) {
+        setError(t('invalidPassword'));
+      } else {
+        setError(errorText(error) || t('loginFailed'));
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="relative min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <LanguageSwitcher className="absolute right-4 top-4 w-40" />
       <div className="max-w-md w-full space-y-8">
         <div>
           <div className="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100">
             <LockClosedIcon className="h-6 w-6 text-blue-600" />
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            PurelyMail Panel Access
+            {t('title')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            {clerkConfigured ? 'Sign in or create an account to manage your mailboxes' : 'Enter your admin password to continue'}
+            {clerkConfigured ? t('subtitleClerk') : t('subtitlePassword')}
           </p>
         </div>
 
         {clerkConfigured && (
           <div className="space-y-3">
             <SignInButton mode="modal" forceRedirectUrl="/">
-              <button type="button" className="btn-primary w-full">Sign in</button>
+              <button type="button" className="btn-primary w-full">{t('signIn')}</button>
             </SignInButton>
             <SignUpButton mode="modal" forceRedirectUrl="/">
-              <button type="button" className="btn-secondary w-full">Create an account</button>
+              <button type="button" className="btn-secondary w-full">{t('createAccount')}</button>
             </SignUpButton>
             <div className="flex items-center gap-3 pt-4 text-xs uppercase tracking-wide text-gray-400">
               <span className="h-px flex-1 bg-gray-200" />
-              Administrator
+              {t('adminDivider')}
               <span className="h-px flex-1 bg-gray-200" />
             </div>
           </div>
@@ -92,7 +91,7 @@ export default function Login() {
         <form className={clerkConfigured ? 'space-y-6' : 'mt-8 space-y-6'} onSubmit={handleSubmit}>
           <div>
             <label htmlFor="password" className="sr-only">
-              Password
+              {t('password')}
             </label>
             <input
               id="password"
@@ -101,7 +100,7 @@ export default function Login() {
               autoComplete="current-password"
               required
               className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-              placeholder="Admin password"
+              placeholder={t('passwordPlaceholder')}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
@@ -123,12 +122,12 @@ export default function Login() {
               {loading ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Signing in...
+                  {t('signingIn')}
                 </div>
               ) : (
                 <>
                   <LockClosedIcon className="h-5 w-5 text-white/70 mr-2" />
-                  {clerkConfigured ? 'Sign in as admin' : 'Sign in'}
+                  {clerkConfigured ? t('signInAsAdmin') : t('signIn')}
                 </>
               )}
             </button>

@@ -117,7 +117,7 @@ async function findSpecialFolder(client: ImapFlow, specialUse: string): Promise<
 async function downloadSource(client: ImapFlow, uid: number): Promise<Buffer> {
   const msg = await client.fetchOne(String(uid), { source: true }, { uid: true });
   if (!msg || !msg.source) {
-    throw new MailError('Message not found', 404);
+    throw new MailError('Message not found', 404, 'message_not_found');
   }
   return msg.source;
 }
@@ -209,7 +209,7 @@ export function getMessage(
         { uid: true }
       );
       if (!meta) {
-        throw new MailError('Message not found', 404);
+        throw new MailError('Message not found', 404, 'message_not_found');
       }
       const parsed = await simpleParser(await downloadSource(client, uid));
       await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
@@ -266,7 +266,7 @@ export function getAttachment(
       const parsed = await simpleParser(await downloadSource(client, uid));
       const attachment = parsed.attachments[index];
       if (!attachment) {
-        throw new MailError('Attachment not found', 404);
+        throw new MailError('Attachment not found', 404, 'attachment_not_found');
       }
       return {
         filename: attachment.filename || `attachment-${index + 1}`,

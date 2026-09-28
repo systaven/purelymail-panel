@@ -1,0 +1,88 @@
+import { defineMessages } from '..';
+
+// Admin dashboard (DashboardOverview) and the Settings page (AccountSettings).
+export const dashboardMessages = defineMessages({
+  en: {
+    title: 'Dashboard', welcome: 'Welcome to your PurelyMail management panel',
+    loadFailed: 'Failed to load dashboard data',
+    statDomains: 'Domains', statUsers: 'Users', statRoutingRules: 'Routing Rules',
+    quickActions: 'Quick Actions',
+    addDomain: 'Add Domain', addDomainDesc: 'Register a new domain for email hosting',
+    createUser: 'Create User', createUserDesc: 'Add a new email user to your domain',
+    setupRouting: 'Setup Routing', setupRoutingDesc: 'Configure email routing rules',
+  },
+  'zh-CN': {
+    title: '仪表盘', welcome: '欢迎使用 PurelyMail 管理面板',
+    loadFailed: '无法加载仪表盘数据',
+    statDomains: '域名', statUsers: '用户', statRoutingRules: '路由规则',
+    quickActions: '快捷操作',
+    addDomain: '添加域名', addDomainDesc: '注册一个新域名用于邮件托管',
+    createUser: '创建用户', createUserDesc: '为你的域名添加新的邮件用户',
+    setupRouting: '设置路由', setupRoutingDesc: '配置邮件路由规则',
+  },
+  'zh-TW': {
+    title: '儀表板', welcome: '歡迎使用 PurelyMail 管理面板',
+    loadFailed: '無法載入儀表板資料',
+    statDomains: '網域', statUsers: '使用者', statRoutingRules: '路由規則',
+    quickActions: '快速操作',
+    addDomain: '新增網域', addDomainDesc: '註冊新的網域以代管電子郵件',
+    createUser: '建立使用者', createUserDesc: '為你的網域新增郵件使用者',
+    setupRouting: '設定路由', setupRoutingDesc: '設定郵件路由規則',
+  },
+  ja: {
+    title: 'ダッシュボード', welcome: 'PurelyMail 管理パネルへようこそ',
+    loadFailed: 'ダッシュボードのデータを読み込めませんでした',
+    statDomains: 'ドメイン', statUsers: 'ユーザー', statRoutingRules: 'ルーティングルール',
+    quickActions: 'クイックアクション',
+    addDomain: 'ドメインを追加', addDomainDesc: 'メールホスティング用の新しいドメインを登録します',
+    createUser: 'ユーザーを作成', createUserDesc: 'ドメインに新しいメールユーザーを追加します',
+    setupRouting: 'ルーティングを設定', setupRoutingDesc: 'メールのルーティングルールを設定します',
+  },
+});
+
+export const settingsMessages = defineMessages({
+  en: {
+    title: 'Account Settings', subtitle: 'View your account credit and API configuration',
+    loadFailed: 'Failed to load account credit',
+    accountCredit: 'Account Credit', availableCredit: 'Available Credit', refreshCredit: 'Refresh Credit',
+    apiConfig: 'API Configuration',
+    apiConfigDesc: 'This application uses the PurelyMail API to manage your email services. Your API key is securely stored as an environment variable.',
+    apiKeyBefore: 'To update your API key, modify the ', apiKeyAfter: ' environment variable.',
+    apiEndpoints: 'API Endpoints',
+    apiEndpointsDesc: 'This management panel uses the official PurelyMail API v0 endpoints:',
+    endpointUsers: 'User Management: ', endpointDomains: 'Domain Management: ', endpointRules: 'Routing Rules: ', endpointAccount: 'Account: ',
+  },
+  'zh-CN': {
+    title: '账户设置', subtitle: '查看账户余额和 API 配置',
+    loadFailed: '无法加载账户余额',
+    accountCredit: '账户余额', availableCredit: '可用余额', refreshCredit: '刷新余额',
+    apiConfig: 'API 配置',
+    apiConfigDesc: '本应用通过 PurelyMail API 管理你的邮件服务。你的 API 密钥作为环境变量安全保存。',
+    apiKeyBefore: '如需更新 API 密钥，请修改环境变量 ', apiKeyAfter: '。',
+    apiEndpoints: 'API 端点',
+    apiEndpointsDesc: '本管理面板使用 PurelyMail 官方 API v0 端点：',
+    endpointUsers: '用户管理：', endpointDomains: '域名管理：', endpointRules: '路由规则：', endpointAccount: '账户：',
+  },
+  'zh-TW': {
+    title: '帳戶設定', subtitle: '檢視帳戶餘額和 API 設定',
+    loadFailed: '無法載入帳戶餘額',
+    accountCredit: '帳戶餘額', availableCredit: '可用餘額', refreshCredit: '重新整理餘額',
+    apiConfig: 'API 設定',
+    apiConfigDesc: '本應用程式透過 PurelyMail API 管理你的郵件服務。你的 API 金鑰以環境變數的形式安全保存。',
+    apiKeyBefore: '若要更新 API 金鑰，請修改環境變數 ', apiKeyAfter: '。',
+    apiEndpoints: 'API 端點',
+    apiEndpointsDesc: '本管理面板使用 PurelyMail 官方 API v0 端點：',
+    endpointUsers: '使用者管理：', endpointDomains: '網域管理：', endpointRules: '路由規則：', endpointAccount: '帳戶：',
+  },
+  ja: {
+    title: 'アカウント設定', subtitle: 'アカウントのクレジット残高と API 設定を確認します',
+    loadFailed: 'クレジット残高を読み込めませんでした',
+    accountCredit: 'アカウントのクレジット', availableCredit: '利用可能なクレジット', refreshCredit: '残高を更新',
+    apiConfig: 'API 設定',
+    apiConfigDesc: 'このアプリは PurelyMail API を使ってメールサービスを管理します。API キーは環境変数として安全に保存されています。',
+    apiKeyBefore: 'API キーを変更するには、環境変数 ', apiKeyAfter: ' を編集してください。',
+    apiEndpoints: 'API エンドポイント',
+    apiEndpointsDesc: 'この管理パネルは PurelyMail 公式 API v0 の次のエンドポイントを使用します：',
+    endpointUsers: 'ユーザー管理：', endpointDomains: 'ドメイン管理：', endpointRules: 'ルーティングルール：', endpointAccount: 'アカウント：',
+  },
+});

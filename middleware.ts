@@ -16,7 +16,7 @@ async function hasAdminCookie(req: NextRequest): Promise<boolean> {
   return Boolean(await verifyAuthToken(req.cookies.get(AUTH_COOKIE)?.value));
 }
 
-const unauthorized = () => NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+const unauthorized = () => NextResponse.json({ error: 'Unauthorized', code: 'unauthorized' }, { status: 401 });
 
 const withClerk = clerkMiddleware(async (auth, req) => {
   if (isPublic(req) || (await hasAdminCookie(req))) return;

@@ -1,14 +1,21 @@
 import { useState, useEffect } from 'react';
 import { AccountCredit } from '@/lib/purelymail';
+import { apiFetch } from '@/lib/client-api';
+import { useLocale, useT } from '@/lib/i18n';
+import { useErrorText } from '@/lib/i18n/useErrorText';
+import { settingsMessages } from '@/lib/i18n/messages/dashboard';
 
 export default function AccountSettings() {
+  const t = useT(settingsMessages);
+  const errorText = useErrorText();
+  const { locale } = useLocale();
   const [accountCredit, setAccountCredit] = useState<AccountCredit | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const formatCurrency = (amount: string): string => {
     const numAmount = parseFloat(amount);
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 2,
@@ -25,17 +32,11 @@ export default function AccountSettings() {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('/api/account');
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch account credit');
-      }
-
-      const data: AccountCredit = await response.json();
+      const data = await apiFetch<AccountCredit>('/api/account');
       setAccountCredit(data);
     } catch (err) {
       console.error('Failed to fetch account credit:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load account credit');
+      setError(err instanceof Error ? errorText(err) : t('loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -58,9 +59,9 @@ export default function AccountSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Account Settings</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
         <p className="mt-2 text-gray-600">
-          View your account credit and API configuration
+          {t('subtitle')}
         </p>
       </div>
 
@@ -73,7 +74,7 @@ export default function AccountSettings() {
       {/* Account Credit */}
       {accountCredit && (
         <div className="card">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Account Credit</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">{t('accountCredit')}</h3>
           
           <div className="bg-green-50 p-4 rounded-md">
             <div className="flex items-center">
@@ -83,7 +84,7 @@ export default function AccountSettings() {
                 </svg>
               </div>
               <div className="ml-3">
-                <h4 className="text-sm font-medium text-green-800">Available Credit</h4>
+                <h4 className="text-sm font-medium text-green-800">{t('availableCredit')}</h4>
                 <p className="text-2xl font-bold text-green-900">{formatCurrency(accountCredit.credit)}</p>
               </div>
             </div>
@@ -94,7 +95,7 @@ export default function AccountSettings() {
               onClick={fetchAccountCredit}
               className="btn-secondary"
             >
-              Refresh Credit
+              {t('refreshCredit')}
             </button>
           </div>
         </div>
@@ -102,30 +103,29 @@ export default function AccountSettings() {
 
       {/* API Configuration */}
       <div className="card">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">API Configuration</h3>
+        <h3 className="text-lg font-medium text-gray-900 mb-4">{t('apiConfig')}</h3>
         <div className="bg-gray-50 p-4 rounded-md">
           <p className="text-sm text-gray-600 mb-2">
-            This application uses the PurelyMail API to manage your email services.
-            Your API key is securely stored as an environment variable.
+            {t('apiConfigDesc')}
           </p>
           <p className="text-sm text-gray-500">
-            To update your API key, modify the <code className="bg-gray-200 px-1 rounded">PURELYMAIL_API_KEY</code> environment variable.
+            {t('apiKeyBefore')}<code className="bg-gray-200 px-1 rounded">PURELYMAIL_API_KEY</code>{t('apiKeyAfter')}
           </p>
         </div>
       </div>
 
       {/* API Endpoints Information */}
       <div className="card">
-        <h3 className="text-lg font-medium text-gray-900 mb-4">API Endpoints</h3>
+        <h3 className="text-lg font-medium text-gray-900 mb-4">{t('apiEndpoints')}</h3>
         <div className="bg-blue-50 p-4 rounded-md">
           <p className="text-sm text-blue-800 mb-2">
-            This management panel uses the official PurelyMail API v0 endpoints:
+            {t('apiEndpointsDesc')}
           </p>
           <ul className="text-xs text-blue-700 space-y-1 ml-4">
-            <li>• User Management: listUser, getUser, createUser, modifyUser, deleteUser</li>
-            <li>• Domain Management: listDomains, addDomain, deleteDomain, updateDomainSettings</li>
-            <li>• Routing Rules: listRoutingRules, createRoutingRule, deleteRoutingRule</li>
-            <li>• Account: checkAccountCredit</li>
+            <li>• {t('endpointUsers')}listUser, getUser, createUser, modifyUser, deleteUser</li>
+            <li>• {t('endpointDomains')}listDomains, addDomain, deleteDomain, updateDomainSettings</li>
+            <li>• {t('endpointRules')}listRoutingRules, createRoutingRule, deleteRoutingRule</li>
+            <li>• {t('endpointAccount')}checkAccountCredit</li>
           </ul>
         </div>
       </div>

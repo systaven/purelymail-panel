@@ -12,6 +12,11 @@ import {
   LockClosedIcon
 } from '@heroicons/react/24/outline';
 import { User, Domain } from '@/lib/purelymail';
+import { apiFetch } from '@/lib/client-api';
+import { useT } from '@/lib/i18n';
+import { commonMessages } from '@/lib/i18n/messages/common';
+import { userMessages } from '@/lib/i18n/messages/users';
+import { useErrorText } from '@/lib/i18n/useErrorText';
 
 interface UserFormData {
   localPart: string;
@@ -39,6 +44,8 @@ function AddUserForm({ onSuccess }: { onSuccess: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const [domains, setDomains] = useState<Domain[]>([]);
   const [domainsLoading, setDomainsLoading] = useState(true);
+  const t = useT(userMessages);
+  const errorText = useErrorText();
   
   const selectedDomain = watch('domain');
 
@@ -79,7 +86,7 @@ function AddUserForm({ onSuccess }: { onSuccess: () => void }) {
       const actualDomain = data.domain === 'custom' ? data.customDomain : data.domain;
       
       if (!actualDomain) {
-        setError('Please select a domain or enter a custom domain');
+        setError(t('domainMissing'));
         return;
       }
 
@@ -92,27 +99,18 @@ function AddUserForm({ onSuccess }: { onSuccess: () => void }) {
         requireTwoFactorAuthentication: data.requireTwoFactorAuthentication || false,
       };
 
-      const response = await fetch('/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create user');
-      }
+      await apiFetch('/api/users', 'POST', payload);
 
       reset();
       onSuccess();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create user');
+      setError(errorText(err));
     }
   };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="card">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">Add New User</h3>
+      <h3 className="text-lg font-medium text-gray-900 mb-4">{t('addTitle')}</h3>
       
       {error && (
         <div className="mb-4 rounded-md bg-red-50 p-4">
@@ -123,18 +121,18 @@ function AddUserForm({ onSuccess }: { onSuccess: () => void }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
           <label htmlFor="localPart" className="form-label">
-            Username (local part)
+            {t('localPart')}
           </label>
           <input
             type="text"
             id="localPart"
-            placeholder="username"
+            placeholder={t('localPartPlaceholder')}
             className="form-input"
             {...register('localPart', {
-              required: 'Username is required',
+              required: t('localPartRequired'),
               pattern: {
                 value: /^[a-zA-Z0-9._-]+$/,
-                message: 'Username can only contain letters, numbers, dots, hyphens, and underscores',
+                message: t('localPartInvalid'),
               },
             })}
           />
@@ -145,20 +143,20 @@ function AddUserForm({ onSuccess }: { onSuccess: () => void }) {
 
         <div>
           <label htmlFor="domain" className="form-label">
-            Domain {domainsLoading && <span className="text-xs text-gray-500">(loading...)</span>}
+            {t('domain')} {domainsLoading && <span className="text-xs text-gray-500">{t('domainLoading')}</span>}
           </label>
           <select
             id="domain"
             className="form-input"
             disabled={domainsLoading}
             {...register('domain', {
-              required: 'Please select a domain',
+              required: t('domainRequired'),
             })}
           >
-            <option value="">Select a domain...</option>
+            <option value="">{t('selectDomain')}</option>
             
             {/* Predefined PurelyMail domains */}
-            <optgroup label="PurelyMail Domains">
+            <optgroup label={t('purelymailDomains')}>
               {predefinedDomains.map((domain) => (
                 <option key={domain} value={domain}>
                   {domain}
@@ -168,7 +166,7 @@ function AddUserForm({ onSuccess }: { onSuccess: () => void }) {
 
             {/* Custom domains from API */}
             {domains.length > 0 && (
-              <optgroup label="Your Custom Domains">
+              <optgroup label={t('customDomains')}>
                 {domains
                   .filter(domain => !predefinedDomains.includes(domain.name))
                   .map((domain) => (
@@ -179,7 +177,7 @@ function AddUserForm({ onSuccess }: { onSuccess: () => void }) {
               </optgroup>
             )}
 
-            <option value="custom">Other domain...</option>
+            <option value="custom">{t('otherDomain')}</option>
           </select>
           {errors.domain && (
             <p className="mt-1 text-sm text-red-600">{errors.domain.message}</p>
@@ -191,7 +189,7 @@ function AddUserForm({ onSuccess }: { onSuccess: () => void }) {
       {selectedDomain === 'custom' && (
         <div className="mb-4">
           <label htmlFor="customDomain" className="form-label">
-            Custom Domain
+            {t('customDomain')}
           </label>
           <input
             type="text"
@@ -199,10 +197,10 @@ function AddUserForm({ onSuccess }: { onSuccess: () => void }) {
             placeholder="yourdomain.com"
             className="form-input"
             {...register('customDomain', {
-              required: selectedDomain === 'custom' ? 'Custom domain is required' : false,
+              required: selectedDomain === 'custom' ? t('customDomainRequired') : false,
               pattern: {
                 value: /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+$/,
-                message: 'Please enter a valid domain name',
+                message: t('domainInvalid'),
               },
             })}
           />
@@ -215,17 +213,17 @@ function AddUserForm({ onSuccess }: { onSuccess: () => void }) {
       <div className="mb-4">
         <div className="max-w-md">
           <label htmlFor="password" className="form-label">
-            Password
+            {t('password')}
           </label>
           <input
             type="password"
             id="password"
             className="form-input"
             {...register('password', {
-              required: 'Password is required',
+              required: t('passwordRequired'),
               minLength: {
                 value: 8,
-                message: 'Password must be at least 8 characters long',
+                message: t('passwordMin'),
               },
             })}
           />
@@ -245,7 +243,7 @@ function AddUserForm({ onSuccess }: { onSuccess: () => void }) {
               {...register('recoveryEnabled')}
             />
             <label htmlFor="recoveryEnabled" className="ml-2 text-sm text-gray-700">
-              Enable account recovery
+              {t('enableRecovery')}
             </label>
           </div>
           
@@ -258,7 +256,7 @@ function AddUserForm({ onSuccess }: { onSuccess: () => void }) {
               {...register('enableSpamFiltering')}
             />
             <label htmlFor="enableSpamFiltering" className="ml-2 text-sm text-gray-700">
-              Enable spam filtering
+              {t('enableSpamFiltering')}
             </label>
           </div>
           
@@ -271,7 +269,7 @@ function AddUserForm({ onSuccess }: { onSuccess: () => void }) {
               {...register('enableSearchIndexing')}
             />
             <label htmlFor="enableSearchIndexing" className="ml-2 text-sm text-gray-700">
-              Enable search indexing
+              {t('enableSearchIndexing')}
             </label>
           </div>
           
@@ -283,7 +281,7 @@ function AddUserForm({ onSuccess }: { onSuccess: () => void }) {
               {...register('requireTwoFactorAuthentication')}
             />
             <label htmlFor="requireTwoFactorAuthentication" className="ml-2 text-sm text-gray-700">
-              Require two-factor authentication
+              {t('requireTwoFactor')}
             </label>
           </div>
         </div>
@@ -296,7 +294,7 @@ function AddUserForm({ onSuccess }: { onSuccess: () => void }) {
           className="btn-primary flex items-center gap-2"
         >
           <PlusIcon className="h-4 w-4" />
-          {isSubmitting ? 'Creating...' : 'Create User'}
+          {isSubmitting ? t('creating') : t('createUser')}
         </button>
       </div>
     </form>
@@ -324,6 +322,9 @@ function EditUserModal({
     }
   });
   const [error, setError] = useState<string | null>(null);
+  const t = useT(userMessages);
+  const tc = useT(commonMessages);
+  const errorText = useErrorText();
   
   const password = watch('password');
 
@@ -333,7 +334,7 @@ function EditUserModal({
 
       // Validate passwords if provided
       if (data.password && data.password !== data.confirmPassword) {
-        setError('Passwords do not match');
+        setError(t('passwordMismatch'));
         return;
       }
 
@@ -356,21 +357,12 @@ function EditUserModal({
         updatePayload.newUserName = data.userName;
       }
 
-      const response = await fetch('/api/users', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatePayload),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update user');
-      }
+      await apiFetch('/api/users', 'PATCH', updatePayload);
 
       onSuccess();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update user');
+      setError(errorText(err));
     }
   };
 
@@ -381,11 +373,12 @@ function EditUserModal({
       <div className="relative mx-auto my-10 w-full max-w-md rounded-md border border-gray-200 bg-surface p-5 shadow-lg sm:my-20">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium text-gray-900">
-            Edit User: {user.userName}
+            {t('editTitle', { name: user.userName })}
           </h3>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
+            aria-label={tc('close')}
           >
             <XMarkIcon className="h-6 w-6" />
           </button>
@@ -402,17 +395,17 @@ function EditUserModal({
             {/* Username Field */}
             <div>
               <label htmlFor="edit-userName" className="form-label">
-                Email Address (Username)
+                {t('emailAddress')}
               </label>
               <input
                 type="email"
                 id="edit-userName"
                 className="form-input"
                 {...register('userName', {
-                  required: 'Email address is required',
+                  required: t('emailRequired'),
                   pattern: {
                     value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                    message: 'Please enter a valid email address',
+                    message: t('emailInvalid'),
                   },
                 })}
               />
@@ -425,7 +418,7 @@ function EditUserModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label htmlFor="edit-password" className="form-label">
-                  New Password (optional)
+                  {t('newPassword')}
                 </label>
                 <input
                   type="password"
@@ -434,19 +427,19 @@ function EditUserModal({
                   {...register('password', {
                     minLength: {
                       value: 8,
-                      message: 'Password must be at least 8 characters long',
+                      message: t('passwordMin'),
                     },
                   })}
                 />
                 {errors.password && (
                   <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
                 )}
-                <p className="mt-1 text-xs text-gray-500">Leave empty to keep current password</p>
+                <p className="mt-1 text-xs text-gray-500">{t('keepPassword')}</p>
               </div>
 
               <div>
                 <label htmlFor="edit-confirmPassword" className="form-label">
-                  Confirm New Password
+                  {t('confirmPassword')}
                 </label>
                 <input
                   type="password"
@@ -455,7 +448,7 @@ function EditUserModal({
                   {...register('confirmPassword', {
                     validate: (value) => {
                       if (password && password.trim() && value !== password) {
-                        return 'Passwords do not match';
+                        return t('passwordMismatch');
                       }
                       return true;
                     },
@@ -479,7 +472,7 @@ function EditUserModal({
                 {...register('recoveryEnabled')}
               />
               <label htmlFor="edit-recoveryEnabled" className="ml-2 text-sm text-gray-700">
-                Enable account recovery
+                {t('enableRecovery')}
               </label>
             </div>
             
@@ -491,7 +484,7 @@ function EditUserModal({
                 {...register('enableSpamFiltering')}
               />
               <label htmlFor="edit-enableSpamFiltering" className="ml-2 text-sm text-gray-700">
-                Enable spam filtering
+                {t('enableSpamFiltering')}
               </label>
             </div>
             
@@ -503,7 +496,7 @@ function EditUserModal({
                 {...register('enableSearchIndexing')}
               />
               <label htmlFor="edit-enableSearchIndexing" className="ml-2 text-sm text-gray-700">
-                Enable search indexing
+                {t('enableSearchIndexing')}
               </label>
             </div>
             
@@ -515,7 +508,7 @@ function EditUserModal({
                 {...register('requireTwoFactorAuthentication')}
               />
               <label htmlFor="edit-requireTwoFactorAuthentication" className="ml-2 text-sm text-gray-700">
-                Require two-factor authentication
+                {t('requireTwoFactor')}
               </label>
             </div>
           </div>
@@ -526,14 +519,14 @@ function EditUserModal({
               onClick={onClose}
               className="btn-secondary"
             >
-              Cancel
+              {tc('cancel')}
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
               className="btn-primary"
             >
-              {isSubmitting ? 'Updating...' : 'Update User'}
+              {isSubmitting ? t('updating') : t('updateUser')}
             </button>
           </div>
         </form>
@@ -552,13 +545,15 @@ function UserCard({
   onEdit: (user: User) => void;
 }) {
   const [isDeleting, setIsDeleting] = useState(false);
+  const t = useT(userMessages);
+  const tc = useT(commonMessages);
 
   const owned = user as User & { ownerLabel?: string | null; private?: boolean };
 
   const handleDelete = async () => {
     const warning = owned.private
-      ? `Delete ${user.userName}? It belongs to ${owned.ownerLabel}. The mailbox and all of its mail are permanently deleted.`
-      : `Are you sure you want to delete user ${user.userName}?`;
+      ? t('confirmDeletePrivate', { name: user.userName, owner: owned.ownerLabel ?? '' })
+      : t('confirmDelete', { name: user.userName });
     if (!confirm(warning)) {
       return;
     }
@@ -582,44 +577,44 @@ function UserCard({
             {owned.private && (
               <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800">
                 <LockClosedIcon className="h-3 w-3" />
-                Private · {owned.ownerLabel}
+                {t('privateBadge', { owner: owned.ownerLabel ?? '' })}
               </span>
             )}
           </div>
 
           {owned.private && (
-            <p className="text-sm text-gray-500">Only its owner can read it or change its settings. You can delete it.</p>
+            <p className="text-sm text-gray-500">{t('privateNote')}</p>
           )}
           
           <div className="flex flex-wrap gap-2 mb-3">
             {user.enableSpamFiltering && (
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                 <ShieldCheckIcon className="h-3 w-3" />
-                Spam Filtering
+                {t('badgeSpam')}
               </span>
             )}
             {user.requireTwoFactorAuthentication && (
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                 <ShieldCheckIcon className="h-3 w-3" />
-                2FA Required
+                {t('badgeTwoFactor')}
               </span>
             )}
             {user.recoveryEnabled && (
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
                 <EnvelopeIcon className="h-3 w-3" />
-                Recovery Enabled
+                {t('badgeRecovery')}
               </span>
             )}
             {user.enableSearchIndexing && (
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                Search Indexing
+                {t('badgeSearch')}
               </span>
             )}
           </div>
 
           {user.recoveryEnabled && (
             <div className="text-sm text-gray-600">
-              <p>Recovery: Enabled</p>
+              <p>{t('recoveryEnabled')}</p>
             </div>
           )}
         </div>
@@ -631,7 +626,7 @@ function UserCard({
             className="btn-secondary text-sm flex items-center gap-2"
           >
             <EnvelopeIcon className="h-4 w-4" />
-            Open mailbox
+            {t('openMailbox')}
           </Link>
 
           <button
@@ -639,7 +634,7 @@ function UserCard({
             className="btn-secondary text-sm flex items-center gap-2"
           >
             <PencilIcon className="h-4 w-4" />
-            Edit
+            {tc('edit')}
           </button>
           </>)}
 
@@ -649,7 +644,7 @@ function UserCard({
             className="btn-danger text-sm flex items-center gap-2"
           >
             <TrashIcon className="h-4 w-4" />
-            {isDeleting ? 'Deleting...' : 'Delete'}
+            {isDeleting ? tc('deleting') : tc('delete')}
           </button>
         </div>
       </div>
@@ -662,6 +657,9 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const t = useT(userMessages);
+  const tc = useT(commonMessages);
+  const errorText = useErrorText();
 
   useEffect(() => {
     fetchUsers();
@@ -672,17 +670,11 @@ export default function UserManagement() {
       setLoading(true);
       setError(null);
       
-      const response = await fetch('/api/users');
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch users');
-      }
-
-      const data = await response.json();
+      const data = await apiFetch<User[]>('/api/users');
       setUsers(data);
     } catch (err) {
       console.error('Failed to fetch users:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load users');
+      setError(errorText(err));
     } finally {
       setLoading(false);
     }
@@ -690,20 +682,11 @@ export default function UserManagement() {
 
   const handleDeleteUser = async (userName: string) => {
     try {
-      const response = await fetch('/api/users', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userName }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete user');
-      }
+      await apiFetch('/api/users', 'DELETE', { userName });
 
       await fetchUsers(); // Refresh the list
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete user');
+      alert(errorText(err));
     }
   };
 
@@ -733,7 +716,7 @@ export default function UserManagement() {
           onClick={fetchUsers}
           className="mt-2 btn-primary"
         >
-          Retry
+          {tc('retry')}
         </button>
       </div>
     );
@@ -742,9 +725,9 @@ export default function UserManagement() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+        <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
         <p className="mt-2 text-gray-600">
-          Manage email users and their settings
+          {t('subtitle')}
         </p>
       </div>
 
@@ -761,20 +744,20 @@ export default function UserManagement() {
 
       <div className="space-y-4">
         <h2 className="text-xl font-semibold text-gray-900">
-          Users ({users.length})
+          {t('usersCount', { count: users.length })}
         </h2>
         
         {users.length === 0 ? (
           <div className="card text-center py-12">
             <div className="text-gray-500">
-              <p className="text-lg">No users found via API</p>
-              <p className="text-sm mt-1 mb-4">User management may not be available through the PurelyMail API</p>
+              <p className="text-lg">{t('empty')}</p>
+              <p className="text-sm mt-1 mb-4">{t('emptyHint')}</p>
               <div className="bg-blue-50 border border-blue-200 rounded-md p-4 text-left">
-                <h4 className="text-sm font-medium text-blue-800 mb-2">💡 Alternative Options:</h4>
+                <h4 className="text-sm font-medium text-blue-800 mb-2">{t('alternatives')}</h4>
                 <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• Manage users through the PurelyMail web interface</li>
-                  <li>• Check if your API key has user management permissions</li>
-                  <li>• Contact PurelyMail support for API access details</li>
+                  <li>{t('altWeb')}</li>
+                  <li>{t('altApiKey')}</li>
+                  <li>{t('altSupport')}</li>
                 </ul>
               </div>
             </div>

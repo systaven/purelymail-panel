@@ -11,6 +11,7 @@ A comprehensive web-based management panel for the PurelyMail API, built with Ne
 - ⚙️ **Account Settings** - Manage account information and view usage statistics
 - ✉️ **Webmail** - Read, search, organize and send mail from any mailbox in the account (see [Webmail](#webmail))
 - 👥 **Guest accounts** - People sign up with Clerk and manage their own mailboxes within limits you set (see [Guest accounts](#guest-accounts))
+- 🌐 **Languages** - English, 简体中文, 繁體中文 and 日本語; picked from the browser and switchable in the sidebar and on the login page (Clerk's screens follow along)
 - 🎨 **Modern UI** - Light and dark themes (follows the system, or pick one), works on phones and tablets; Mail switches to one pane at a time on small screens
 - 🔐 **Secure API** - Server-side API key management
 - ☁️ **Deploy anywhere** - Vercel, Appwrite Sites or Docker
@@ -238,6 +239,10 @@ Limits of this: whoever holds the PurelyMail API key or the PurelyMail account c
 2. Set `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`, then redeploy (the publishable key is built into the page).
 3. A Clerk production instance only works on its own domain and subdomains (e.g. an instance for `example.com` works on `mail.example.com`, not on `*.appwrite.network`).
 4. Open **Guests**, choose the domains open to guests, and adjust the defaults.
+
+## Languages
+
+UI strings live in `lib/i18n/messages/`, one file per area with every language side by side; TypeScript fails the build if a language is missing a key. To add a language, add it to `LOCALES` and `LOCALE_NAMES` in `lib/i18n/index.tsx`, add its strings to each messages file, and (optionally) map it to a Clerk localization in `pages/_app.tsx`. Server errors carry a `code` (see `lib/errors.ts`) that the browser translates with `lib/i18n/messages/errors.ts`.
 
 ## Docker
 

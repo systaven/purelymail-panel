@@ -1,3 +1,5 @@
+import { apiFetch } from '@/lib/client-api';
+import type { Locale } from '@/lib/i18n';
 import type {
   MailAddress,
   MailFolder,
@@ -9,15 +11,6 @@ import type {
 
 export type { MailAddress, MailFolder, MessageAction, MessageDetail, MessageList, MessageSummary, OutgoingMessage } from '@/lib/mail/operations';
 
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, init);
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.details ? `${data.error}: ${data.details}` : data.error || `Request failed (${response.status})`);
-  }
-  return data as T;
-}
-
 function query(params: Record<string, string | number | undefined>): string {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -26,13 +19,9 @@ function query(params: Record<string, string | number | undefined>): string {
   return search.toString();
 }
 
-function post<T>(url: string, body: unknown, method = 'POST'): Promise<T> {
-  return request<T>(url, {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-}
+// Errors are ApiClientErrors, so callers can show them with useErrorText.
+const request = <T>(url: string) => apiFetch<T>(url);
+const post = <T>(url: string, body: unknown, method = 'POST') => apiFetch<T>(url, method, body);
 
 export const mailApi = {
   mailboxes: () => request<string[]>('/api/mail/mailboxes'),
@@ -68,22 +57,42 @@ export function displayName(list: MailAddress[]): string {
   return first ? first.name || first.address || '' : '';
 }
 
-export function formatDate(iso: string | null, long = false): string {
-  if (!iso) return '';
-  const date = new Date(iso);
-  if (long) return date.toLocaleString();
-  const now = new Date();
-  if (date.toDateString() === now.toDateString()) {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-  if (date.getFullYear() === now.getFullYear()) {
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-  }
-  return date.toLocaleDateString();
+// Folders with a special use get a name in the viewer's language; others keep
+// the name from the server.
+const SPECIAL_FOLDER_KEYS = {
+  '\\Inbox': 'folderInbox',
+  '\\Sent': 'folderSent',
+  '\\Drafts': 'folderDrafts',
+  '\\Trash': 'folderTrash',
+  '\\Junk': 'folderJunk',
+  '\\Archive': 'folderArchive',
+} as const;
+
+type SpecialFolderKey = (typeof SPECIAL_FOLDER_KEYS)[keyof typeof SPECIAL_FOLDER_KEYS];
+
+export function folderLabel(folder: MailFolder, t: (key: SpecialFolderKey) => string): string {
+  const key = folder.specialUse ? SPECIAL_FOLDER_KEYS[folder.specialUse as keyof typeof SPECIAL_FOLDER_KEYS] : undefined;
+  return key ? t(key) : folder.name;
 }
 
-export function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+export function formatDate(iso: string | null, locale: Locale, long = false): string {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (long) return date.toLocaleString(locale);
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+  }
+  if (date.getFullYear() === now.getFullYear()) {
+    return date.toLocaleDateString(locale, { month: 'short', day: 'numeric' });
+  }
+  return date.toLocaleDateString(locale);
+}
+
+export function formatSize(bytes: number, locale: Locale): string {
+  const number = (value: number, digits: number) =>
+    value.toLocaleString(locale, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  if (bytes < 1024) return `${number(bytes, 0)} B`;
+  if (bytes < 1024 * 1024) return `${number(bytes / 1024, 0)} KB`;
+  return `${number(bytes / 1024 / 1024, 1)} MB`;
 }

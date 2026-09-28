@@ -1,5 +1,9 @@
 import { useState } from 'react';
 import { PaperClipIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { useLocale, useT } from '@/lib/i18n';
+import { commonMessages } from '@/lib/i18n/messages/common';
+import { mailMessages } from '@/lib/i18n/messages/mail';
+import { useErrorText } from '@/lib/i18n/useErrorText';
 import { formatSize, OutgoingMessage } from './api';
 
 // Kept well below the send route's 15mb body limit, since base64 adds a third.
@@ -39,6 +43,10 @@ export default function ComposeModal({
   onClose: () => void;
   onSend: (message: OutgoingMessage) => Promise<void>;
 }) {
+  const t = useT(mailMessages);
+  const tc = useT(commonMessages);
+  const { locale } = useLocale();
+  const errorText = useErrorText();
   const [draft, setDraft] = useState<ComposeDraft>(initial);
   const [showCcBcc, setShowCcBcc] = useState(Boolean(initial.cc || initial.bcc));
   const [files, setFiles] = useState<File[]>([]);
@@ -54,7 +62,7 @@ export default function ComposeModal({
 
   const handleSend = async () => {
     if (!draft.to.trim()) {
-      setError('Please enter at least one recipient');
+      setError(t('recipientRequired'));
       return;
     }
     setSending(true);
@@ -68,8 +76,8 @@ export default function ComposeModal({
         }))
       );
       await onSend({ ...draft, attachments });
-    } catch (err: any) {
-      setError(err.message || 'Failed to send message');
+    } catch (err) {
+      setError(errorText(err));
       setSending(false);
     }
   };
@@ -81,30 +89,30 @@ export default function ComposeModal({
           <h2 className="text-lg font-semibold text-gray-900">
             {title}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Close">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label={tc('close')}>
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
 
         <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-4 sm:px-5">
           <div className="text-sm text-gray-500">
-            From <span className="font-medium text-gray-900">{mailbox}</span>
+            {t('from')} <span className="font-medium text-gray-900">{mailbox}</span>
           </div>
           <div className="flex items-center gap-2">
-            <input className="form-input" placeholder="To (separate addresses with commas)" value={draft.to} onChange={update('to')} />
+            <input className="form-input" placeholder={t('toPlaceholder')} value={draft.to} onChange={update('to')} />
             {!showCcBcc && (
               <button type="button" onClick={() => setShowCcBcc(true)} className="whitespace-nowrap text-sm text-primary-600 hover:underline">
-                Cc / Bcc
+                {t('ccBcc')}
               </button>
             )}
           </div>
           {showCcBcc && (
             <>
-              <input className="form-input" placeholder="Cc" value={draft.cc} onChange={update('cc')} />
-              <input className="form-input" placeholder="Bcc" value={draft.bcc} onChange={update('bcc')} />
+              <input className="form-input" placeholder={t('cc')} value={draft.cc} onChange={update('cc')} />
+              <input className="form-input" placeholder={t('bcc')} value={draft.bcc} onChange={update('bcc')} />
             </>
           )}
-          <input className="form-input" placeholder="Subject" value={draft.subject} onChange={update('subject')} />
+          <input className="form-input" placeholder={t('subject')} value={draft.subject} onChange={update('subject')} />
           <textarea
             className="form-input min-h-[12rem] flex-1 font-mono text-sm sm:min-h-[18rem]"
             value={draft.text}
@@ -115,7 +123,7 @@ export default function ComposeModal({
           <div>
             <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-primary-600 hover:underline">
               <PaperClipIcon className="h-4 w-4" />
-              Attach files
+              {t('attachFiles')}
               <input
                 type="file"
                 multiple
@@ -130,8 +138,8 @@ export default function ComposeModal({
               <ul className="mt-2 space-y-1">
                 {files.map((file, i) => (
                   <li key={i} className="flex items-center justify-between rounded bg-gray-50 px-3 py-1 text-sm">
-                    <span className="truncate">{file.name} <span className="text-gray-500">({formatSize(file.size)})</span></span>
-                    <button onClick={() => setFiles(files.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-600" aria-label="Remove attachment">
+                    <span className="truncate">{file.name} <span className="text-gray-500">({formatSize(file.size, locale)})</span></span>
+                    <button onClick={() => setFiles(files.filter((_, j) => j !== i))} className="text-gray-400 hover:text-red-600" aria-label={t('removeAttachment')}>
                       <XMarkIcon className="h-4 w-4" />
                     </button>
                   </li>
@@ -140,7 +148,7 @@ export default function ComposeModal({
             )}
             {tooLarge && (
               <p className="mt-2 text-sm text-red-600">
-                Attachments total {formatSize(totalSize)}; the limit is {formatSize(MAX_ATTACHMENT_BYTES)}.
+                {t('attachmentsTooLarge', { size: formatSize(totalSize, locale), limit: formatSize(MAX_ATTACHMENT_BYTES, locale) })}
               </p>
             )}
           </div>
@@ -149,9 +157,9 @@ export default function ComposeModal({
         </div>
 
         <div className="flex justify-end gap-3 border-t border-gray-200 px-5 py-3">
-          <button onClick={onClose} className="btn-secondary" disabled={sending}>Discard</button>
+          <button onClick={onClose} className="btn-secondary" disabled={sending}>{t('discard')}</button>
           <button onClick={handleSend} className="btn-primary disabled:opacity-50" disabled={sending || tooLarge}>
-            {sending ? 'Sending...' : 'Send'}
+            {sending ? t('sending') : t('send')}
           </button>
         </div>
       </div>

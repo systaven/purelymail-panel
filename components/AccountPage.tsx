@@ -2,19 +2,18 @@ import { useEffect, useRef, useState } from 'react';
 import { SignInButton, SignUpButton, UserProfile, useClerk, useUser } from '@clerk/nextjs';
 import { useAuth } from '@/hooks/useAuth';
 import { clerkConfigured } from '@/lib/clerk-client';
-
-async function call(url: string, method: string) {
-  const response = await fetch(url, { method });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
-  return data;
-}
+import { apiFetch } from '@/lib/client-api';
+import { useT } from '@/lib/i18n';
+import { useErrorText } from '@/lib/i18n/useErrorText';
+import { accountMessages } from '@/lib/i18n/messages/account';
 
 // The password admin can link a Clerk account, which makes it an admin so
 // they can sign in with Clerk later.
 function LinkClerk() {
   const { clerk, refetch } = useAuth();
   const { signOut } = useClerk();
+  const t = useT(accountMessages);
+  const errorText = useErrorText();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -24,8 +23,8 @@ function LinkClerk() {
     try {
       await fn();
       await refetch();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      setError(errorText(err));
     } finally {
       setBusy(false);
     }
@@ -34,45 +33,44 @@ function LinkClerk() {
   if (!clerk) {
     return (
       <div className="card space-y-3">
-        <h2 className="text-lg font-semibold text-gray-900">Link a Clerk account</h2>
-        <p className="text-sm text-gray-600">
-          Sign in to (or create) the Clerk account you want to use. It becomes an administrator, so next
-          time you can sign in with Clerk instead of the admin password. The password keeps working.
-        </p>
+        <h2 className="text-lg font-semibold text-gray-900">{t('linkTitle')}</h2>
+        <p className="text-sm text-gray-600">{t('linkDescription')}</p>
         <div className="flex flex-wrap gap-3">
           <SignInButton mode="modal" forceRedirectUrl="/account">
-            <button className="btn-primary">Sign in to Clerk</button>
+            <button className="btn-primary">{t('signInToClerk')}</button>
           </SignInButton>
           <SignUpButton mode="modal" forceRedirectUrl="/account">
-            <button className="btn-secondary">Create a Clerk account</button>
+            <button className="btn-secondary">{t('createClerkAccount')}</button>
           </SignUpButton>
         </div>
       </div>
     );
   }
 
+  // Split the sentence around the email so it can be shown in bold.
+  const [beforeEmail, afterEmail] = t(clerk.linkedAdmin ? 'signedInLinked' : 'signedInNotLinked').split('{email}');
+
   return (
     <div className="card space-y-3">
-      <h2 className="text-lg font-semibold text-gray-900">Clerk account</h2>
+      <h2 className="text-lg font-semibold text-gray-900">{t('clerkAccount')}</h2>
       <p className="text-sm text-gray-600">
-        Signed in to Clerk as <span className="font-medium text-gray-900">{clerk.email || 'unknown'}</span>
-        {clerk.linkedAdmin ? ', which is linked as an administrator.' : ', which is not linked yet.'}
+        {beforeEmail}<span className="font-medium text-gray-900">{clerk.email || t('unknownEmail')}</span>{afterEmail}
       </p>
       {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       <div className="flex flex-wrap gap-3">
         {clerk.linkedAdmin ? (
           <button className="btn-danger" disabled={busy} onClick={() => {
-            if (confirm('Make this Clerk account a guest again?')) run(() => call('/api/admin/link-clerk', 'DELETE'));
+            if (confirm(t('confirmUnlink'))) run(() => apiFetch('/api/admin/link-clerk', 'DELETE'));
           }}>
-            Unlink
+            {t('unlink')}
           </button>
         ) : (
-          <button className="btn-primary" disabled={busy} onClick={() => run(() => call('/api/admin/link-clerk', 'POST'))}>
-            Link as administrator
+          <button className="btn-primary" disabled={busy} onClick={() => run(() => apiFetch('/api/admin/link-clerk', 'POST'))}>
+            {t('linkAsAdmin')}
           </button>
         )}
         <button className="btn-secondary" disabled={busy} onClick={() => run(() => signOut({ redirectUrl: '/account' }))}>
-          Use a different Clerk account
+          {t('useDifferentAccount')}
         </button>
       </div>
     </div>
@@ -106,17 +104,18 @@ function ClerkAccount() {
 }
 
 export default function AccountPage() {
+  const t = useT(accountMessages);
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">My account</h1>
-        <p className="mt-2 text-gray-600">Profile, email addresses, password, two-factor authentication and connected accounts.</p>
+        <h1 className="text-3xl font-bold text-gray-900">{t('title')}</h1>
+        <p className="mt-2 text-gray-600">{t('subtitle')}</p>
       </div>
       {clerkConfigured ? (
         <ClerkAccount />
       ) : (
         <div className="card text-gray-600">
-          Clerk isn't configured. Set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY to enable accounts.
+          {t('notConfigured')}
         </div>
       )}
     </div>

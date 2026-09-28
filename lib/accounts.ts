@@ -128,7 +128,7 @@ export async function setOwner(mailbox: string, clerkUserId: string | null): Pro
 export async function createRequest(clerkUserId: string, mailbox: string, note: string | null): Promise<MailboxRequest> {
   const result = await db().from('mailbox_requests').insert({ clerk_user_id: clerkUserId, mailbox, note }).select().single();
   if (result.error?.code === '23505') {
-    throw new ApiError('Someone has already requested this address', 409);
+    throw new ApiError('Someone has already requested this address', 409, 'address_requested');
   }
   return unwrap(result, 'create request');
 }

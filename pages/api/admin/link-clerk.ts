@@ -7,10 +7,10 @@ import { ensureUser } from '@/lib/session';
 export default apiHandler('admin', {
   POST: async (req, res, session) => {
     if (session.via !== 'password') {
-      throw new ApiError('Sign in with the admin password to link a Clerk account', 400);
+      throw new ApiError('Sign in with the admin password to link a Clerk account', 400, 'link_needs_password');
     }
     if (!session.clerkUserId) {
-      throw new ApiError('Sign in to Clerk first', 400);
+      throw new ApiError('Sign in to Clerk first', 400, 'link_needs_clerk');
     }
     const user = await ensureUser(session.clerkUserId);
     await updateUser(user.clerk_user_id, { role: 'admin', disabled: false });
@@ -20,7 +20,7 @@ export default apiHandler('admin', {
   // Turns the linked Clerk account back into a guest.
   DELETE: async (req, res, session) => {
     if (session.via !== 'password' || !session.clerkUserId) {
-      throw new ApiError('Sign in with the admin password and the Clerk account to unlink it', 400);
+      throw new ApiError('Sign in with the admin password and the Clerk account to unlink it', 400, 'unlink_needs_both');
     }
     await updateUser(session.clerkUserId, { role: 'guest' });
     await audit('admin', 'admin.unlink_clerk', session.clerkUserId);

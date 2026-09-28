@@ -8,7 +8,7 @@ import { deleteMailbox } from '@/lib/provisioning';
 // can delete them, nothing more.
 async function assertNotPrivate(mailbox: string) {
   if (await getOwner(mailbox)) {
-    throw new ApiError('This mailbox is private to its owner; it can only be deleted', 403);
+    throw new ApiError('This mailbox is private to its owner; it can only be deleted', 403, 'mailbox_private_delete_only');
   }
 }
 

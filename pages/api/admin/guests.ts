@@ -24,20 +24,20 @@ export default apiHandler('admin', {
   PATCH: async (req, res, session) => {
     const id = requireString(req.body?.clerk_user_id, 'user');
     if (!(await getUser(id))) {
-      throw new ApiError('User not found', 404);
+      throw new ApiError('User not found', 404, 'user_not_found');
     }
     const body = req.body || {};
     const fields: Record<string, unknown> = {};
     if (body.role !== undefined) {
       if (body.role !== 'guest' && body.role !== 'admin') throw new ApiError('Invalid role', 400);
       if (body.role === 'guest' && id === session.clerkUserId && session.via === 'clerk') {
-        throw new ApiError("You can't remove your own admin role", 400);
+        throw new ApiError("You can't remove your own admin role", 400, 'cannot_demote_self');
       }
       fields.role = body.role;
     }
     if (body.disabled !== undefined) {
       if (body.disabled && id === session.clerkUserId && session.via === 'clerk') {
-        throw new ApiError("You can't disable yourself", 400);
+        throw new ApiError("You can't disable yourself", 400, 'cannot_disable_self');
       }
       fields.disabled = Boolean(body.disabled);
     }

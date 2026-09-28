@@ -20,13 +20,13 @@ export function apiHandler(access: Access, methods: Record<string, Handler>) {
     try {
       const session = await getSession(req);
       if (!session) {
-        throw new ApiError('Unauthorized', 401);
+        throw new ApiError('Unauthorized', 401, 'unauthorized');
       }
       if (session.disabled) {
-        throw new ApiError('Your account has been disabled', 403);
+        throw new ApiError('Your account has been disabled', 403, 'account_disabled');
       }
       if (access === 'admin' && session.role !== 'admin') {
-        throw new ApiError('Admins only', 403);
+        throw new ApiError('Admins only', 403, 'admins_only');
       }
       await handler(req, res, session);
     } catch (error: any) {
@@ -36,6 +36,8 @@ export function apiHandler(access: Access, methods: Record<string, Handler>) {
       }
       res.status(status).json({
         error: status === 500 ? 'Request failed' : error.message,
+        code: status === 500 ? 'request_failed' : error.code,
+        params: status === 500 ? undefined : error.params,
         details: status === 500 ? error.responseText || error.message : undefined,
       });
     }
@@ -45,7 +47,7 @@ export function apiHandler(access: Access, methods: Record<string, Handler>) {
 export function requireString(value: unknown, name: string): string {
   const str = Array.isArray(value) ? value[0] : value;
   if (typeof str !== 'string' || !str.trim()) {
-    throw new ApiError(`Missing ${name}`, 400);
+    throw new ApiError(`Missing ${name}`, 400, 'missing_field', { name });
   }
   return str.trim();
 }

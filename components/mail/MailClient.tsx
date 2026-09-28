@@ -14,7 +14,12 @@ import {
   DocumentIcon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
+import { Locale, useLocale, useT } from '@/lib/i18n';
+import { commonMessages } from '@/lib/i18n/messages/common';
+import { mailMessages } from '@/lib/i18n/messages/mail';
+import { useErrorText } from '@/lib/i18n/useErrorText';
 import {
+  folderLabel,
   formatAddress,
   formatAddresses,
   formatDate,
@@ -48,7 +53,15 @@ function quote(text: string): string {
   return text.split('\n').map((line) => `> ${line}`).join('\n');
 }
 
-function buildReply(message: MessageDetail, mode: ReplyMode, self: string): ComposeDraft {
+// The quoted text is written in the viewer's language; the Re:/Fwd: prefixes
+// are email conventions and stay as they are.
+function buildReply(
+  message: MessageDetail,
+  mode: ReplyMode,
+  self: string,
+  t: ReturnType<typeof useT<typeof mailMessages.en>>,
+  locale: Locale
+): ComposeDraft {
   const notSelf = (a: MailAddress) => a.address?.toLowerCase() !== self;
   const references = [...message.references, ...(message.messageId ? [message.messageId] : [])];
 
@@ -59,11 +72,11 @@ function buildReply(message: MessageDetail, mode: ReplyMode, self: string): Comp
       text: [
         '',
         '',
-        '---------- Forwarded message ----------',
-        `From: ${formatAddresses(message.from)}`,
-        `Date: ${formatDate(message.date, true)}`,
-        `Subject: ${message.subject}`,
-        `To: ${formatAddresses(message.to)}`,
+        t('forwardedHeader'),
+        `${t('headerFrom')}: ${formatAddresses(message.from)}`,
+        `${t('headerDate')}: ${formatDate(message.date, locale, true)}`,
+        `${t('headerSubject')}: ${message.subject}`,
+        `${t('headerTo')}: ${formatAddresses(message.to)}`,
         '',
         message.text,
       ].join('\n'),
@@ -81,7 +94,7 @@ function buildReply(message: MessageDetail, mode: ReplyMode, self: string): Comp
     to: unique(to),
     cc: unique(cc),
     subject: withPrefix('Re:', message.subject, /^re:/i),
-    text: `\n\nOn ${formatDate(message.date, true)}, ${formatAddresses(message.from)} wrote:\n${quote(message.text)}`,
+    text: `\n\n${t('quoteHeader', { date: formatDate(message.date, locale, true), sender: formatAddresses(message.from) })}\n${quote(message.text)}`,
     inReplyTo: message.messageId,
     references,
   };
@@ -89,6 +102,10 @@ function buildReply(message: MessageDetail, mode: ReplyMode, self: string): Comp
 
 export default function MailClient() {
   const router = useRouter();
+  const t = useT(mailMessages);
+  const tc = useT(commonMessages);
+  const { locale } = useLocale();
+  const errorText = useErrorText();
   const [mailboxes, setMailboxes] = useState<string[]>([]);
   const [mailbox, setMailbox] = useState<string>('');
   const [folders, setFolders] = useState<MailFolder[]>([]);
@@ -118,10 +135,10 @@ export default function MailClient() {
     mailApi.mailboxes()
       .then((names) => {
         setMailboxes(names);
-        if (!names.length) setSetupError("You don't have any mailboxes yet.");
+        if (!names.length) setSetupError(t('noMailboxes'));
       })
-      .catch((err) => setSetupError(err.message));
-  }, []);
+      .catch((err) => setSetupError(errorText(err)));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pick the mailbox from ?mailbox=, falling back to the first one.
   useEffect(() => {
@@ -160,9 +177,9 @@ export default function MailClient() {
     try {
       setFolders(await mailApi.folders(mailbox));
     } catch (err: any) {
-      setListError(err.message);
+      setListError(errorText(err));
     }
-  }, [mailbox, ready]);
+  }, [mailbox, ready, errorText]);
 
   const loadList = useCallback(async (silent = false) => {
     if (!ready) return;
@@ -175,11 +192,11 @@ export default function MailClient() {
       const result = await mailApi.messages(mailbox, folder, page, search);
       if (id === listRequest.current) setList(result);
     } catch (err: any) {
-      if (id === listRequest.current && !silent) setListError(err.message);
+      if (id === listRequest.current && !silent) setListError(errorText(err));
     } finally {
       if (id === listRequest.current) setListLoading(false);
     }
-  }, [mailbox, folder, page, search, ready]);
+  }, [mailbox, folder, page, search, ready, errorText]);
 
   useEffect(() => { loadFolders(); }, [loadFolders]);
   useEffect(() => { loadList(); }, [loadList]);
@@ -217,7 +234,7 @@ export default function MailClient() {
       });
       if (list?.messages.find((m) => m.uid === uid && !m.seen)) loadFolders();
     } catch (err: any) {
-      if (id === messageRequest.current) setMessageError(err.message);
+      if (id === messageRequest.current) setMessageError(errorText(err));
     } finally {
       if (id === messageRequest.current) setMessageLoading(false);
     }
@@ -239,7 +256,7 @@ export default function MailClient() {
       setChecked(new Set());
       refresh();
     } catch (err: any) {
-      setNotice(err.message);
+      setNotice(errorText(err));
     }
   };
 
@@ -260,14 +277,14 @@ export default function MailClient() {
   };
 
   const revokeAccess = async () => {
-    if (!confirm(`Delete the panel's app password for ${mailbox}? A new one is created the next time you open this mailbox.`)) {
+    if (!confirm(t('resetAccessConfirm', { mailbox }))) {
       return;
     }
     try {
       await mailApi.revoke(mailbox);
-      setNotice('App password deleted.');
+      setNotice(t('appPasswordDeleted'));
     } catch (err: any) {
-      setNotice(err.message);
+      setNotice(errorText(err));
     }
   };
 
@@ -276,6 +293,7 @@ export default function MailClient() {
   }
 
   const currentFolder = folders.find((f) => f.path === folder);
+  const currentFolderName = currentFolder ? folderLabel(currentFolder, t) : '';
 
   const folderList = (
     <div className="py-2">
@@ -292,7 +310,7 @@ export default function MailClient() {
             style={{ paddingLeft: `${0.75 + depth * 0.75}rem` }}
           >
             <Icon className="h-4 w-4 shrink-0" />
-            <span className="truncate">{f.name}</span>
+            <span className="truncate">{folderLabel(f, t)}</span>
             {f.unseen > 0 && <span className="ml-auto text-xs font-semibold">{f.unseen}</span>}
           </button>
         );
@@ -314,21 +332,21 @@ export default function MailClient() {
     <>
     <div className="flex h-[calc(100dvh-4.5rem)] flex-col gap-2 sm:h-[calc(100dvh-5.5rem)] sm:gap-3 lg:h-[calc(100dvh-3rem)]">
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="hidden text-3xl font-bold text-gray-900 lg:block lg:mr-2">Mail</h1>
+        <h1 className="hidden text-3xl font-bold text-gray-900 lg:block lg:mr-2">{t('title')}</h1>
         <button
           onClick={() => setFoldersOpen(true)}
           className="btn-secondary flex min-w-0 items-center gap-2 text-sm lg:hidden"
-          aria-label="Folders"
+          aria-label={t('folders')}
         >
           <FolderIcon className="h-4 w-4 shrink-0" />
-          <span className="max-w-[7rem] truncate">{currentFolder?.name || 'Folders'}</span>
+          <span className="max-w-[7rem] truncate">{currentFolderName || t('folders')}</span>
           {(currentFolder?.unseen ?? 0) > 0 && <span className="text-xs font-semibold">{currentFolder?.unseen}</span>}
         </button>
         <select
           className="min-w-0 flex-1 rounded-md border border-gray-300 py-2 pl-3 pr-8 text-sm lg:flex-none"
           value={mailbox}
           onChange={(e) => changeMailbox(e.target.value)}
-          aria-label="Mailbox"
+          aria-label={t('mailbox')}
         >
           {mailboxes.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
@@ -345,7 +363,7 @@ export default function MailClient() {
           <input
             type="search"
             className="form-input pl-9 text-sm"
-            placeholder={`Search ${currentFolder?.name || 'folder'}`}
+            placeholder={t('searchIn', { folder: currentFolderName || t('folder') })}
             value={searchInput}
             onChange={(e) => {
               setSearchInput(e.target.value);
@@ -356,32 +374,32 @@ export default function MailClient() {
             }}
           />
         </form>
-        <button onClick={refresh} className="btn-secondary flex items-center gap-2 px-3 text-sm" title="Refresh" aria-label="Refresh">
+        <button onClick={refresh} className="btn-secondary flex items-center gap-2 px-3 text-sm" title={tc('refresh')} aria-label={tc('refresh')}>
           <ArrowPathIcon className={`h-4 w-4 ${listLoading ? 'animate-spin' : ''}`} />
         </button>
-        <button onClick={revokeAccess} className="btn-secondary hidden items-center gap-2 px-3 text-sm sm:flex" title="Delete the panel's app password for this mailbox" aria-label="Reset access">
+        <button onClick={revokeAccess} className="btn-secondary hidden items-center gap-2 px-3 text-sm sm:flex" title={t('resetAccessTitle')} aria-label={t('resetAccess')}>
           <KeyIcon className="h-4 w-4" />
-          <span className="hidden xl:inline">Reset access</span>
+          <span className="hidden xl:inline">{t('resetAccess')}</span>
         </button>
         <button
-          onClick={() => setCompose({ title: 'New message', draft: emptyDraft })}
+          onClick={() => setCompose({ title: t('newMessage'), draft: emptyDraft })}
           className="btn-primary flex items-center gap-2 text-sm"
           disabled={!mailbox}
         >
           <PencilSquareIcon className="h-4 w-4" />
-          <span className="hidden sm:inline">Compose</span>
+          <span className="hidden sm:inline">{t('compose')}</span>
         </button>
       </div>
 
       {notice && (
         <div className="flex items-center justify-between gap-3 rounded-md bg-blue-50 px-4 py-2 text-sm text-blue-800">
           {notice}
-          <button onClick={() => setNotice(null)} className="font-medium">Dismiss</button>
+          <button onClick={() => setNotice(null)} className="font-medium">{tc('dismiss')}</button>
         </div>
       )}
 
       <div className="flex min-h-0 flex-1 overflow-hidden rounded-lg border border-gray-200 bg-surface shadow-sm">
-        <nav className="hidden w-48 shrink-0 overflow-y-auto border-r border-gray-200 lg:block" aria-label="Folders">
+        <nav className="hidden w-48 shrink-0 overflow-y-auto border-r border-gray-200 lg:block" aria-label={t('folders')}>
           {folderList}
         </nav>
 
@@ -417,8 +435,8 @@ export default function MailClient() {
             onBack={closeReader}
             onShowImages={() => message && openMessage(message.uid, true)}
             onReply={(mode) => message && setCompose({
-              title: mode === 'forward' ? 'Forward' : 'Reply',
-              draft: buildReply(message, mode, mailbox),
+              title: mode === 'forward' ? t('forward') : t('reply'),
+              draft: buildReply(message, mode, mailbox, t, locale),
             })}
             onToggleFlag={() => message && runAction([message.uid], message.flagged ? 'unflag' : 'flag')}
             onMarkUnread={() => message && runAction([message.uid], 'unseen')}
@@ -430,12 +448,12 @@ export default function MailClient() {
     </div>
 
       {foldersOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Folders">
+        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label={t('folders')}>
           <div className="absolute inset-0 bg-black/40" onClick={() => setFoldersOpen(false)} />
           <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw] overflow-y-auto bg-surface shadow-xl">
             <div className="flex h-14 items-center justify-between border-b border-gray-200 px-4">
-              <span className="font-semibold text-gray-900">Folders</span>
-              <button onClick={() => setFoldersOpen(false)} className="rounded-md p-1 text-gray-500 hover:bg-gray-100" aria-label="Close folders">
+              <span className="font-semibold text-gray-900">{t('folders')}</span>
+              <button onClick={() => setFoldersOpen(false)} className="rounded-md p-1 text-gray-500 hover:bg-gray-100" aria-label={t('closeFolders')}>
                 <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
@@ -453,7 +471,7 @@ export default function MailClient() {
           onSend={async (outgoing) => {
             await mailApi.send(mailbox, outgoing);
             setCompose(null);
-            setNotice('Message sent.');
+            setNotice(t('messageSent'));
             refresh();
           }}
         />

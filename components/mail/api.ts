@@ -35,10 +35,7 @@ function post<T>(url: string, body: unknown, method = 'POST'): Promise<T> {
 }
 
 export const mailApi = {
-  mailboxes: async (): Promise<string[]> => {
-    const users = await request<{ userName: string }[]>('/api/users');
-    return users.map((u) => u.userName.toLowerCase()).sort();
-  },
+  mailboxes: () => request<string[]>('/api/mail/mailboxes'),
   folders: (mailbox: string) =>
     request<MailFolder[]>(`/api/mail/folders?${query({ mailbox })}`),
   messages: (mailbox: string, folder: string, page: number, q?: string) =>

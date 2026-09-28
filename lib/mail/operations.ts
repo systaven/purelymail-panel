@@ -3,6 +3,7 @@ import { simpleParser, AddressObject } from 'mailparser';
 import MailComposer from 'nodemailer/lib/mail-composer';
 import { withImap, withSmtp } from './connection';
 import { sanitizeEmailHtml } from './sanitize';
+import { ApiError as MailError } from '@/lib/errors';
 
 export interface MailFolder {
   path: string;
@@ -120,11 +121,8 @@ async function downloadSource(client: ImapFlow, uid: number): Promise<Buffer> {
   return msg.source;
 }
 
-export class MailError extends Error {
-  constructor(message: string, public status: number) {
-    super(message);
-  }
-}
+// Mail errors carry an HTTP status like any other API error.
+export { ApiError as MailError } from '@/lib/errors';
 
 export function listFolders(mailbox: string): Promise<MailFolder[]> {
   return withImap(mailbox, async (client) => {

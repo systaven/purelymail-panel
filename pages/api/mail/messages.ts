@@ -5,8 +5,8 @@ const ACTIONS: MessageAction[] = ['seen', 'unseen', 'flag', 'unflag', 'move', 'd
 const PAGE_SIZE = 50;
 
 export default mailHandler({
-  GET: async (req, res) => {
-    const mailbox = requireMailbox(req.query.mailbox);
+  GET: async (req, res, session) => {
+    const mailbox = await requireMailbox(session, req.query.mailbox);
     const folder = requireString(req.query.folder, 'folder');
     const page = Math.max(0, Number(req.query.page) || 0);
     const query = typeof req.query.q === 'string' ? req.query.q.trim() : '';
@@ -15,7 +15,7 @@ export default mailHandler({
   },
 
   // Bulk actions: { mailbox, folder, uids, action, target? }
-  POST: async (req, res) => {
+  POST: async (req, res, session) => {
     const { mailbox, folder, uids, action, target } = req.body || {};
     if (!ACTIONS.includes(action)) {
       throw new MailError('Invalid action', 400);
@@ -24,7 +24,7 @@ export default mailHandler({
       throw new MailError('No messages selected', 400);
     }
     await applyAction(
-      requireMailbox(mailbox),
+      await requireMailbox(session, mailbox),
       requireString(folder, 'folder'),
       uids.map((uid: unknown) => requireUid(uid)),
       action,

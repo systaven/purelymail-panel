@@ -10,26 +10,42 @@ import {
   CogIcon,
   EnvelopeIcon,
   ArrowRightOnRectangleIcon,
+  UserGroupIcon,
+  UserCircleIcon,
+  InboxStackIcon,
 } from '@heroicons/react/24/outline';
+import { UserButton } from '@clerk/nextjs';
 import { useAuth } from '@/hooks/useAuth';
+import { clerkConfigured } from '@/lib/clerk-client';
 
 interface LayoutProps {
   children: ReactNode;
   title?: string;
+  // Page is for admins only; guests see a notice instead of the content.
+  adminOnly?: boolean;
 }
 
-const navigation = [
+const adminNavigation = [
   { name: 'Dashboard', href: '/', icon: HomeIcon },
   { name: 'Domains', href: '/domains', icon: GlobeAltIcon },
   { name: 'Routing Rules', href: '/routing-rules', icon: ArrowPathIcon },
   { name: 'Users', href: '/users', icon: UsersIcon },
+  { name: 'Guests', href: '/guests', icon: UserGroupIcon },
   { name: 'Mail', href: '/mail', icon: EnvelopeIcon },
   { name: 'Settings', href: '/settings', icon: CogIcon },
 ];
 
-export default function Layout({ children, title = 'PurelyMail Management' }: LayoutProps) {
+const guestNavigation = [
+  { name: 'My mailboxes', href: '/', icon: InboxStackIcon },
+  { name: 'Mail', href: '/mail', icon: EnvelopeIcon },
+];
+
+const accountItem = { name: 'My account', href: '/account', icon: UserCircleIcon };
+
+export default function Layout({ children, title = 'PurelyMail Management', adminOnly = false }: LayoutProps) {
   const router = useRouter();
-  const { logout, user } = useAuth();
+  const { logout, user, isAdmin, disabled } = useAuth();
+  const navigation = [...(isAdmin ? adminNavigation : guestNavigation), ...(clerkConfigured ? [accountItem] : [])];
 
   return (
     <>
@@ -77,9 +93,12 @@ export default function Layout({ children, title = 'PurelyMail Management' }: La
             {/* User info and logout */}
             <div className="px-4 py-4 border-t border-gray-200">
               <div className="flex items-center justify-between mb-3">
-                <div className="text-sm text-gray-600">
-                  Signed in as <span className="font-medium text-gray-900">{user || 'admin'}</span>
+                <div className="min-w-0 text-sm text-gray-600">
+                  Signed in as <span className="font-medium text-gray-900 break-all">{user || 'admin'}</span>
+                  <div className="text-xs text-gray-400">{isAdmin ? 'Administrator' : 'Guest'}</div>
                 </div>
+                {/* Renders nothing unless someone is signed in to Clerk. */}
+                {clerkConfigured && <UserButton />}
               </div>
               <button
                 onClick={logout}
@@ -95,7 +114,15 @@ export default function Layout({ children, title = 'PurelyMail Management' }: La
         {/* Main content */}
         <div className="pl-64">
           <main className="py-8 px-8">
-            {children}
+            {disabled ? (
+              <div className="rounded-md bg-red-50 p-4 text-red-700">
+                Your account has been disabled. Contact the administrator if you think this is a mistake.
+              </div>
+            ) : adminOnly && !isAdmin ? (
+              <div className="rounded-md bg-yellow-50 p-4 text-yellow-800">This page is only available to administrators.</div>
+            ) : (
+              children
+            )}
           </main>
         </div>
       </div>

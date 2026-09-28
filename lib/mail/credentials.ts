@@ -1,5 +1,5 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { PurelyMailAPI } from '@/lib/purelymail';
+import { getSupabase } from '@/lib/supabase';
+import { getPurelyMail } from '@/lib/purelymail';
 import { encrypt, decrypt, getKey } from './crypto';
 
 // Each mailbox gets one PurelyMail app password, created through the API key
@@ -7,28 +7,6 @@ import { encrypt, decrypt, getKey } from './crypto';
 
 const TABLE = 'mailbox_credentials';
 const APP_PASSWORD_NAME = 'PurelyMail Panel webmail';
-
-let supabase: SupabaseClient | null = null;
-
-function getSupabase(): SupabaseClient {
-  if (!supabase) {
-    const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !key) {
-      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables must be set');
-    }
-    supabase = createClient(url, key, { auth: { persistSession: false } });
-  }
-  return supabase;
-}
-
-function getPurelyMail(): PurelyMailAPI {
-  const apiKey = process.env.PURELYMAIL_API_KEY;
-  if (!apiKey) {
-    throw new Error('PURELYMAIL_API_KEY environment variable is not set');
-  }
-  return new PurelyMailAPI({ apiKey });
-}
 
 async function readStored(mailbox: string): Promise<string | null> {
   // Fail on a missing key up front, so it isn't mistaken for a corrupt row below.
@@ -54,6 +32,12 @@ async function readStored(mailbox: string): Promise<string | null> {
     await deleteStored(mailbox);
     return null;
   }
+}
+
+// Removes the stored app password without contacting PurelyMail, e.g. after
+// the mailbox itself was deleted (which also deletes its app passwords).
+export async function forgetAppPassword(mailbox: string): Promise<void> {
+  await deleteStored(mailbox);
 }
 
 async function deleteStored(mailbox: string): Promise<void> {

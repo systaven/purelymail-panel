@@ -7,7 +7,7 @@ export const config = {
 };
 
 export default mailHandler({
-  POST: async (req, res) => {
+  POST: async (req, res, session) => {
     const { mailbox, to, cc, bcc, subject, text, inReplyTo, references, attachments } = req.body || {};
     if (attachments !== undefined && !Array.isArray(attachments)) {
       throw new MailError('Invalid attachments', 400);
@@ -26,7 +26,7 @@ export default mailHandler({
         content: requireString(a?.content, 'attachment content'),
       })),
     };
-    await sendMessage(requireMailbox(mailbox), message);
+    await sendMessage(await requireMailbox(session, mailbox), message);
     res.status(200).json({ success: true });
   },
 });

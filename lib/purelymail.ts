@@ -24,11 +24,15 @@ export interface Domain {
 }
 
 export interface RoutingRule {
-  id: string;
-  prefix: string;
+  id: number;
   domainName: string;
+  // true: matchUser is a prefix (matches matchUser*); false: exact local part.
+  prefix: boolean;
+  // Local part to match, i.e. "user" in "user@domain.org"; empty with prefix=true matches everything.
+  matchUser: string;
   targetAddresses: string[];
-  enabled: boolean;
+  // A catch-all rule doesn't fire when the address belongs to an existing user.
+  catchall: boolean;
 }
 
 export interface User {
@@ -151,18 +155,19 @@ export class PurelyMailAPI {
     }
   }
 
-  async modifyRoutingRule(rule: RoutingRule): Promise<void> {
-    const response = await this.client.post('/modifyRoutingRule', rule);
-    if (response.data.type !== 'success') {
-      throw new Error(response.data.message || 'Failed to modify routing rule');
-    }
-  }
-
-  async deleteRoutingRule(ruleId: string): Promise<void> {
-    const response = await this.client.post('/deleteRoutingRule', { id: ruleId });
+  async deleteRoutingRule(routingRuleId: number): Promise<void> {
+    const response = await this.client.post('/deleteRoutingRule', { routingRuleId });
     if (response.data.type !== 'success') {
       throw new Error(response.data.message || 'Failed to delete routing rule');
     }
+  }
+
+  async listUserNames(): Promise<string[]> {
+    const response = await this.client.post('/listUser', {});
+    if (response.data.type === 'success') {
+      return response.data.result.users || [];
+    }
+    throw new Error(response.data.message || 'Failed to list users');
   }
 
   // User Management
@@ -346,6 +351,15 @@ export class PurelyMailAPI {
       return false;
     }
   }
+}
+
+// Client using PURELYMAIL_API_KEY; for server-side code only.
+export function getPurelyMail(): PurelyMailAPI {
+  const apiKey = process.env.PURELYMAIL_API_KEY;
+  if (!apiKey) {
+    throw new Error('PURELYMAIL_API_KEY environment variable is not set');
+  }
+  return new PurelyMailAPI({ apiKey });
 }
 
 // Singleton instance

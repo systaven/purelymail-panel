@@ -1,20 +1,19 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { MailError } from './operations';
+import { ApiError, apiHandler, requireEmail, requireString } from '@/lib/api';
+import { getOwner } from '@/lib/accounts';
+import type { Session } from '@/lib/session';
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export { requireString };
 
-export function requireString(value: unknown, name: string): string {
-  const str = Array.isArray(value) ? value[0] : value;
-  if (typeof str !== 'string' || !str) {
-    throw new MailError(`Missing ${name}`, 400);
-  }
-  return str;
-}
+// Mail routes are open to any signed-in user; each one then checks the
+// mailbox with requireMailbox.
+export const mailHandler = (methods: Parameters<typeof apiHandler>[1]) => apiHandler('user', methods);
 
-export function requireMailbox(value: unknown): string {
-  const mailbox = requireString(value, 'mailbox').trim().toLowerCase();
-  if (!EMAIL_RE.test(mailbox)) {
-    throw new MailError('Invalid mailbox', 400);
+// Returns the requested mailbox if the caller may use it: admins may open any
+// mailbox, guests only the ones they own.
+export async function requireMailbox(session: Session, value: unknown): Promise<string> {
+  const mailbox = requireEmail(value);
+  if (session.role !== 'admin' && (await getOwner(mailbox)) !== session.clerkUserId) {
+    throw new ApiError('You do not have access to this mailbox', 403);
   }
   return mailbox;
 }
@@ -22,32 +21,7 @@ export function requireMailbox(value: unknown): string {
 export function requireUid(value: unknown, name = 'uid'): number {
   const uid = Number(requireString(String(value ?? ''), name));
   if (!Number.isInteger(uid) || uid < 0) {
-    throw new MailError(`Invalid ${name}`, 400);
+    throw new ApiError(`Invalid ${name}`, 400);
   }
   return uid;
-}
-
-// Wraps a mail API handler: restricts methods and turns errors into JSON responses.
-export function mailHandler(
-  methods: Record<string, (req: NextApiRequest, res: NextApiResponse) => Promise<void>>
-) {
-  return async (req: NextApiRequest, res: NextApiResponse) => {
-    const handler = methods[req.method || ''];
-    if (!handler) {
-      res.setHeader('Allow', Object.keys(methods).join(', '));
-      return res.status(405).json({ error: 'Method not allowed' });
-    }
-    try {
-      await handler(req, res);
-    } catch (error: any) {
-      const status = error instanceof MailError ? error.status : 500;
-      if (status === 500) {
-        console.error('Mail API error:', error);
-      }
-      res.status(status).json({
-        error: status === 500 ? 'Mail server request failed' : error.message,
-        details: status === 500 ? error.responseText || error.message : undefined,
-      });
-    }
-  };
 }

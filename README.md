@@ -10,6 +10,7 @@ A comprehensive web-based management panel for the PurelyMail API, built with Ne
 - 🔀 **Routing Rules** - Configure email routing and forwarding rules
 - ⚙️ **Account Settings** - Manage account information and view usage statistics
 - ✉️ **Webmail** - Read, search, organize and send mail from any mailbox in the account (see [Webmail](#webmail))
+- 👥 **Guest accounts** - People sign up with Clerk and manage their own mailboxes within limits you set (see [Guest accounts](#guest-accounts))
 - 🎨 **Modern UI** - Responsive design with Tailwind CSS
 - 🔐 **Secure API** - Server-side API key management
 - ☁️ **Deploy anywhere** - Vercel, Appwrite Sites or Docker
@@ -165,8 +166,10 @@ The application integrates with the following PurelyMail API endpoints:
 | `ADMIN_PASSWORD` | Password used to log in to the panel. A bcrypt hash is recommended (see below); plain text also works. | Yes |
 | `JWT_SECRET` | Random secret for signing session tokens (e.g. `openssl rand -base64 32`). Login fails if it is not set. | Yes |
 | `SUPABASE_URL` | Supabase project URL, for webmail | For webmail |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server-side only) | For webmail |
+| `SUPABASE_SECRET_KEY` | Supabase secret key (`sb_secret_...`) or legacy service role key, server-side only. `SUPABASE_SERVICE_ROLE_KEY` also works | For webmail and guests |
 | `MAIL_CREDENTIALS_KEY` | Random secret that encrypts stored app passwords (e.g. `openssl rand -base64 32`) | For webmail |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` | Clerk keys; turn on guest sign-up and sign-in | For guests |
+| `CLERK_JWT_KEY` | Clerk's JWT public key, to verify sessions without a network call | No |
 | `MAIL_IMAP_HOST` / `MAIL_IMAP_PORT` / `MAIL_SMTP_HOST` / `MAIL_SMTP_PORT` / `MAIL_SMTP_SECURE` | Override the mail servers (default `imap.purelymail.com:993`, `smtp.purelymail.com:465` with implicit TLS; STARTTLS is used for ports 587 and 25 unless `MAIL_SMTP_SECURE=true`) | No |
 
 ### Using a hashed admin password
@@ -192,7 +195,7 @@ The mailbox's owner can see this app password in their PurelyMail settings. If `
 ### Setup
 
 1. In your Supabase project, run [`supabase/mailbox_credentials.sql`](supabase/mailbox_credentials.sql) in the SQL editor.
-2. Set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` and `MAIL_CREDENTIALS_KEY` in your deployment's environment variables.
+2. Set `SUPABASE_URL`, `SUPABASE_SECRET_KEY` and `MAIL_CREDENTIALS_KEY` in your deployment's environment variables.
 
 ### Limitations
 
@@ -203,11 +206,38 @@ The mailbox's owner can see this app password in their PurelyMail settings. If `
 - Messages are composed as plain text.
 - On Appwrite Sites, requests time out after 15 seconds by default. Raising the site timeout (Settings → Timeout, up to 30 seconds) helps with large mailboxes and searches.
 
+## Guest accounts
+
+With Clerk configured, the login page offers **Sign in** and **Create an account** next to the admin password.
+
+- **Guests** (everyone who signs up) see only **My mailboxes** and **Mail**. They can create or request mailboxes on the domains you open to them, up to their limit, and for their own mailboxes: read and send mail, set the password used by mail apps, set forwarding, and delete them.
+- **Admins**: the admin password always works. On **My account**, the password admin can link a Clerk account, which makes it an admin; on **Guests** you can also promote any Clerk user.
+- **Guests page** (admin): approve or reject requests, set the defaults (mailbox limit, whether approval is needed, domains open to all guests), adjust any user (role, disabled, limit, approval, extra domains), assign existing mailboxes to a user or take them back, and see the activity log.
+
+Rules guests can't get around, enforced on the server:
+- Only their own mailboxes are reachable, in every API including webmail.
+- Forwarding is one exact-address rule for their own mailbox; no prefix or catch-all rules.
+- Role addresses such as `admin`, `postmaster`, `abuse` and `noreply` are reserved.
+- Pending requests count toward the limit, and an address can only be requested by one person at a time.
+
+### Setup
+
+1. Run [`supabase/panel_accounts.sql`](supabase/panel_accounts.sql) in the Supabase SQL editor (after `mailbox_credentials.sql`).
+2. Set `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`, then redeploy (the publishable key is built into the page).
+3. A Clerk production instance only works on its own domain and subdomains (e.g. an instance for `example.com` works on `mail.example.com`, not on `*.appwrite.network`).
+4. Open **Guests**, choose the domains open to guests, and adjust the defaults.
+
 ## Docker
 
 ```bash
 docker build -t purelymail-panel .
 docker run -p 3000:3000 --env-file .env.local purelymail-panel
+```
+
+With Clerk, pass the publishable key when building (it's built into the page) and the rest at runtime:
+
+```bash
+docker build --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_... -t purelymail-panel .
 ```
 
 The image runs Next.js in standalone mode on port 3000. When passing a bcrypt `ADMIN_PASSWORD` through `--env-file`, don't escape the `$` characters (Docker doesn't expand them).

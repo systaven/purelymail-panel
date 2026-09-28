@@ -116,7 +116,7 @@ export default function MailClient() {
     mailApi.mailboxes()
       .then((names) => {
         setMailboxes(names);
-        if (!names.length) setSetupError('No mailboxes found. Create a user first.');
+        if (!names.length) setSetupError("You don't have any mailboxes yet.");
       })
       .catch((err) => setSetupError(err.message));
   }, []);

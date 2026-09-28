@@ -3,7 +3,7 @@ import UserManagement from '@/components/UserManagement';
 
 export default function UsersPage() {
   return (
-    <Layout title="Users - PurelyMail Management">
+    <Layout title="Users - PurelyMail Management" adminOnly>
       <UserManagement />
     </Layout>
   );

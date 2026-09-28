@@ -3,7 +3,7 @@ import RoutingRulesManagement from '@/components/RoutingRulesManagement';
 
 export default function RoutingRulesPage() {
   return (
-    <Layout title="Routing Rules - PurelyMail Management">
+    <Layout title="Routing Rules - PurelyMail Management" adminOnly>
       <RoutingRulesManagement />
     </Layout>
   );

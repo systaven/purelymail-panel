@@ -26,3 +26,9 @@ export async function verifyAuthToken(token: string | undefined) {
     return null;
   }
 }
+
+// Clerk sign-in is on only when both keys are configured; otherwise the panel
+// runs with the admin password alone. Safe to call from the Edge middleware.
+export function clerkEnabled(): boolean {
+  return Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.CLERK_SECRET_KEY);
+}

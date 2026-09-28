@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { LockClosedIcon } from '@heroicons/react/24/outline';
+import { SignInButton, SignUpButton } from '@clerk/nextjs';
+import { clerkConfigured } from '@/lib/clerk-client';
 
 export default function Login() {
   const [password, setPassword] = useState('');
@@ -67,10 +69,27 @@ export default function Login() {
             PurelyMail Panel Access
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Enter your admin password to continue
+            {clerkConfigured ? 'Sign in or create an account to manage your mailboxes' : 'Enter your admin password to continue'}
           </p>
         </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+
+        {clerkConfigured && (
+          <div className="space-y-3">
+            <SignInButton mode="modal" forceRedirectUrl="/">
+              <button type="button" className="btn-primary w-full">Sign in</button>
+            </SignInButton>
+            <SignUpButton mode="modal" forceRedirectUrl="/">
+              <button type="button" className="btn-secondary w-full">Create an account</button>
+            </SignUpButton>
+            <div className="flex items-center gap-3 pt-4 text-xs uppercase tracking-wide text-gray-400">
+              <span className="h-px flex-1 bg-gray-200" />
+              Administrator
+              <span className="h-px flex-1 bg-gray-200" />
+            </div>
+          </div>
+        )}
+
+        <form className={clerkConfigured ? 'space-y-6' : 'mt-8 space-y-6'} onSubmit={handleSubmit}>
           <div>
             <label htmlFor="password" className="sr-only">
               Password
@@ -109,7 +128,7 @@ export default function Login() {
               ) : (
                 <>
                   <LockClosedIcon className="h-5 w-5 text-blue-500 group-hover:text-blue-400 mr-2" />
-                  Sign in
+                  {clerkConfigured ? 'Sign in as admin' : 'Sign in'}
                 </>
               )}
             </button>

@@ -1,389 +1,141 @@
-import { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { 
-  PlusIcon, 
-  TrashIcon, 
-  PencilIcon,
-  CheckIcon,
-  XMarkIcon 
-} from '@heroicons/react/24/outline';
-import { RoutingRule } from '@/lib/purelymail';
+import { useEffect, useState } from 'react';
+import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import type { Domain, RoutingRule } from '@/lib/purelymail';
 
-interface RoutingRuleFormData {
-  prefix: string;
-  domainName: string;
-  targetAddresses: string;
-  enabled: boolean;
+async function call<T = any>(url: string, method = 'GET', body?: unknown): Promise<T> {
+  const response = await fetch(url, {
+    method,
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.details ? `${data.error}: ${data.details}` : data.error || `Request failed (${response.status})`);
+  return data;
 }
 
-function AddRoutingRuleForm({ onSuccess }: { onSuccess: () => void }) {
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<RoutingRuleFormData>();
+// Describes which addresses a rule matches, e.g. "sales@example.com" or "sales*@example.com".
+function describeMatch(rule: Pick<RoutingRule, 'matchUser' | 'prefix' | 'domainName' | 'catchall'>): string {
+  const local = rule.prefix ? `${rule.matchUser}*` : rule.matchUser || '(empty)';
+  return `${local}@${rule.domainName}${rule.catchall ? ' (only if no such user)' : ''}`;
+}
+
+function AddRuleForm({ domains, onAdded }: { domains: string[]; onAdded: () => void }) {
+  const [matchUser, setMatchUser] = useState('');
+  const [domainName, setDomainName] = useState(domains[0] || '');
+  const [prefix, setPrefix] = useState(false);
+  const [catchall, setCatchall] = useState(false);
+  const [targets, setTargets] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => { if (!domainName && domains[0]) setDomainName(domains[0]); }, [domains, domainName]);
 
-  const onSubmit = async (data: RoutingRuleFormData) => {
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
     try {
-      setError(null);
-      const payload = {
-        ...data,
-        targetAddresses: data.targetAddresses.split(',').map(addr => addr.trim()),
-      };
-
-      const response = await fetch('/api/routing-rules', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+      await call('/api/routing-rules', 'POST', {
+        matchUser: matchUser.trim().toLowerCase(),
+        domainName,
+        prefix,
+        catchall,
+        targetAddresses: targets.split(/[,\s]+/).map((t) => t.trim()).filter(Boolean),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add routing rule');
-      }
-
-      reset();
-      onSuccess();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add routing rule');
+      setMatchUser('');
+      setTargets('');
+      onAdded();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setSaving(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="card">
-      <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Routing Rule</h3>
-      
-      {error && (
-        <div className="mb-4 rounded-md bg-red-50 p-4">
-          <div className="text-sm text-red-700">{error}</div>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <label htmlFor="prefix" className="form-label">
-            Email Prefix
-          </label>
-          <input
-            type="text"
-            id="prefix"
-            placeholder="support"
-            className="form-input"
-            {...register('prefix', {
-              required: 'Email prefix is required',
-            })}
-          />
-          {errors.prefix && (
-            <p className="mt-1 text-sm text-red-600">{errors.prefix.message}</p>
-          )}
-        </div>
-
-        <div>
-          <label htmlFor="domainName" className="form-label">
-            Domain
-          </label>
-          <input
-            type="text"
-            id="domainName"
-            placeholder="example.com"
-            className="form-input"
-            {...register('domainName', {
-              required: 'Domain name is required',
-            })}
-          />
-          {errors.domainName && (
-            <p className="mt-1 text-sm text-red-600">{errors.domainName.message}</p>
-          )}
-        </div>
+    <form onSubmit={submit} className="card space-y-4">
+      <h2 className="text-lg font-semibold text-gray-900">Add a routing rule</h2>
+      <div className="flex flex-wrap items-center gap-2">
+        <input className="form-input min-w-[8rem] flex-1" placeholder={prefix ? 'prefix (empty = everything)' : 'address, e.g. sales'} value={matchUser} onChange={(e) => setMatchUser(e.target.value)} />
+        <span className="text-gray-500">{prefix ? '*@' : '@'}</span>
+        <select className="form-input w-auto" value={domainName} onChange={(e) => setDomainName(e.target.value)}>
+          {domains.map((d) => <option key={d} value={d}>{d}</option>)}
+        </select>
       </div>
-
-      <div className="mb-4">
-        <label htmlFor="targetAddresses" className="form-label">
-          Target Addresses (comma-separated)
+      <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-700">
+        <label className="flex items-center gap-2">
+          <input type="checkbox" className="rounded border-gray-300" checked={prefix} onChange={(e) => setPrefix(e.target.checked)} />
+          Match as a prefix (anything starting with it)
         </label>
-        <input
-          type="text"
-          id="targetAddresses"
-          placeholder="user1@domain.com, user2@domain.com"
-          className="form-input"
-          {...register('targetAddresses', {
-            required: 'At least one target address is required',
-          })}
-        />
-        {errors.targetAddresses && (
-          <p className="mt-1 text-sm text-red-600">{errors.targetAddresses.message}</p>
-        )}
-      </div>
-
-      <div className="mb-4">
-        <label className="flex items-center">
-          <input
-            type="checkbox"
-            className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            {...register('enabled')}
-            defaultChecked={true}
-          />
-          <span className="ml-2 text-sm text-gray-700">Enable this rule</span>
+        <label className="flex items-center gap-2">
+          <input type="checkbox" className="rounded border-gray-300" checked={catchall} onChange={(e) => setCatchall(e.target.checked)} />
+          Only when the address isn't an existing user (catch-all)
         </label>
       </div>
-
-      <div className="flex justify-end">
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="btn-primary flex items-center gap-2"
-        >
-          <PlusIcon className="h-4 w-4" />
-          {isSubmitting ? 'Adding...' : 'Add Rule'}
-        </button>
+      <div>
+        <label className="form-label" htmlFor="targets">Deliver to</label>
+        <input id="targets" className="form-input" placeholder="one@example.com, two@example.com" value={targets} onChange={(e) => setTargets(e.target.value)} />
       </div>
+      {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+      <button type="submit" className="btn-primary flex items-center gap-2 disabled:opacity-50" disabled={saving || !domainName || !targets.trim() || (!prefix && !matchUser.trim())}>
+        <PlusIcon className="h-4 w-4" /> {saving ? 'Adding...' : 'Add rule'}
+      </button>
     </form>
   );
 }
 
-function RoutingRuleCard({ 
-  rule, 
-  onEdit, 
-  onDelete, 
-  onToggle 
-}: { 
-  rule: RoutingRule; 
-  onEdit: (rule: RoutingRule) => void;
-  onDelete: (id: string) => void;
-  onToggle: (id: string, enabled: boolean) => void;
-}) {
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isToggling, setIsToggling] = useState(false);
-
-  const handleDelete = async () => {
-    if (!confirm(`Are you sure you want to delete this routing rule?`)) {
-      return;
-    }
-
-    setIsDeleting(true);
-    try {
-      await onDelete(rule.id);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleToggle = async () => {
-    setIsToggling(true);
-    try {
-      await onToggle(rule.id, !rule.enabled);
-    } finally {
-      setIsToggling(false);
-    }
-  };
-
-  return (
-    <div className="card">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
-            <h3 className="text-lg font-medium text-gray-900">
-              {rule.prefix}@{rule.domainName}
-            </h3>
-            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-              rule.enabled 
-                ? 'bg-green-100 text-green-800' 
-                : 'bg-gray-100 text-gray-800'
-            }`}>
-              {rule.enabled ? 'Enabled' : 'Disabled'}
-            </span>
-          </div>
-          
-          <div className="text-sm text-gray-600">
-            <p className="mb-1">
-              <span className="font-medium">Forwards to:</span>{' '}
-              {rule.targetAddresses.join(', ')}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 ml-4">
-          <button
-            onClick={handleToggle}
-            disabled={isToggling}
-            className={`p-2 rounded-md transition-colors ${
-              rule.enabled
-                ? 'text-yellow-600 hover:bg-yellow-50'
-                : 'text-green-600 hover:bg-green-50'
-            }`}
-            title={rule.enabled ? 'Disable rule' : 'Enable rule'}
-          >
-            {rule.enabled ? (
-              <XMarkIcon className="h-4 w-4" />
-            ) : (
-              <CheckIcon className="h-4 w-4" />
-            )}
-          </button>
-          
-          <button
-            onClick={() => onEdit(rule)}
-            className="p-2 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-            title="Edit rule"
-          >
-            <PencilIcon className="h-4 w-4" />
-          </button>
-          
-          <button
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-            title="Delete rule"
-          >
-            <TrashIcon className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function RoutingRulesManagement() {
-  const [rules, setRules] = useState<RoutingRule[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [rules, setRules] = useState<RoutingRule[] | null>(null);
+  const [domains, setDomains] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchRules();
-  }, []);
-
-  const fetchRules = async () => {
+  const load = async () => {
     try {
-      setLoading(true);
+      const [r, d] = await Promise.all([call<RoutingRule[]>('/api/routing-rules'), call<Domain[]>('/api/domains')]);
+      setRules(r);
+      setDomains(d.map((x) => x.name).sort());
       setError(null);
-      
-      const response = await fetch('/api/routing-rules');
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch routing rules');
-      }
-
-      const data = await response.json();
-      setRules(data);
-    } catch (err) {
-      console.error('Failed to fetch routing rules:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load routing rules');
-    } finally {
-      setLoading(false);
+    } catch (err: any) {
+      setError(err.message);
     }
   };
+  useEffect(() => { load(); }, []);
 
-  const handleDeleteRule = async (id: string) => {
+  const remove = async (rule: RoutingRule) => {
+    if (!confirm(`Delete the rule for ${describeMatch(rule)}?`)) return;
     try {
-      const response = await fetch('/api/routing-rules', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete routing rule');
-      }
-
-      await fetchRules(); // Refresh the list
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete routing rule');
+      await call('/api/routing-rules', 'DELETE', { id: rule.id });
+      load();
+    } catch (err: any) {
+      setError(err.message);
     }
   };
-
-  const handleToggleRule = async (id: string, enabled: boolean) => {
-    try {
-      const rule = rules.find(r => r.id === id);
-      if (!rule) return;
-
-      const response = await fetch('/api/routing-rules', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...rule, enabled }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update routing rule');
-      }
-
-      await fetchRules(); // Refresh the list
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to update routing rule');
-    }
-  };
-
-  const handleEditRule = (rule: RoutingRule) => {
-    // For now, just show an alert. In a full implementation, 
-    // you'd open a modal or navigate to an edit form
-    alert(`Edit functionality for rule ${rule.id} would be implemented here`);
-  };
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="h-8 w-48 bg-gray-200 rounded animate-pulse"></div>
-        <div className="space-y-4">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="card">
-              <div className="animate-pulse">
-                <div className="h-6 bg-gray-200 rounded w-1/3 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="rounded-md bg-red-50 p-4">
-        <div className="text-red-700">{error}</div>
-        <button
-          onClick={fetchRules}
-          className="mt-2 btn-primary"
-        >
-          Retry
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Routing Rules</h1>
-        <p className="mt-2 text-gray-600">
-          Configure email routing and forwarding rules
-        </p>
+        <p className="mt-2 text-gray-600">Forward or reroute mail for addresses on your domains. To change a rule, delete it and add a new one.</p>
       </div>
 
-      <AddRoutingRuleForm onSuccess={fetchRules} />
+      {error && <div className="rounded-md bg-red-50 p-4 text-sm text-red-700">{error}</div>}
 
-      <div className="space-y-4">
-        <h2 className="text-xl font-semibold text-gray-900">
-          Active Rules ({rules.length})
-        </h2>
-        
-        {rules.length === 0 ? (
-          <div className="card text-center py-12">
-            <div className="text-gray-500">
-              <p className="text-lg">No routing rules configured yet</p>
-              <p className="text-sm mt-1">Add your first rule to start routing emails</p>
+      <AddRuleForm domains={domains} onAdded={load} />
+
+      <div className="space-y-3">
+        <h2 className="text-xl font-semibold text-gray-900">Rules {rules && `(${rules.length})`}</h2>
+        {!rules && !error && <div className="h-24 animate-pulse rounded-lg bg-gray-100" />}
+        {rules && rules.length === 0 && <div className="card text-center text-sm text-gray-500">No routing rules yet.</div>}
+        {rules?.map((rule) => (
+          <div key={rule.id} className="card flex flex-wrap items-center gap-3">
+            <div className="mr-auto min-w-0">
+              <div className="break-all font-medium text-gray-900">{describeMatch(rule)}</div>
+              <div className="break-all text-sm text-gray-600">→ {rule.targetAddresses.join(', ')}</div>
             </div>
+            <button className="btn-danger flex items-center gap-1 text-sm" onClick={() => remove(rule)}>
+              <TrashIcon className="h-4 w-4" /> Delete
+            </button>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {rules.map((rule) => (
-              <RoutingRuleCard
-                key={rule.id}
-                rule={rule}
-                onEdit={handleEditRule}
-                onDelete={handleDeleteRule}
-                onToggle={handleToggleRule}
-              />
-            ))}
-          </div>
-        )}
+        ))}
       </div>
     </div>
   );

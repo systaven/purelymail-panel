@@ -6,9 +6,9 @@ export const config = {
 };
 
 export default mailHandler({
-  GET: async (req, res) => {
+  GET: async (req, res, session) => {
     const attachment = await getAttachment(
-      requireMailbox(req.query.mailbox),
+      await requireMailbox(session, req.query.mailbox),
       requireString(req.query.folder, 'folder'),
       requireUid(req.query.uid),
       requireUid(req.query.index, 'index')

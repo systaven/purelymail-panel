@@ -1,42 +1,27 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { PurelyMailAPI } from '@/lib/purelymail';
+import { apiHandler, ApiError, requireInt, requireString } from '@/lib/api';
+import { getPurelyMail } from '@/lib/purelymail';
 
-const apiKey = process.env.PURELYMAIL_API_KEY;
-
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (!apiKey) {
-    return res.status(500).json({ error: 'API key not configured' });
-  }
-
-  const api = new PurelyMailAPI({ apiKey });
-
-  try {
-    switch (req.method) {
-      case 'GET':
-        const rules = await api.listRoutingRules();
-        return res.status(200).json(rules);
-      
-      case 'POST':
-        await api.addRoutingRule(req.body);
-        return res.status(200).json({ success: true });
-      
-      case 'PUT':
-        await api.modifyRoutingRule(req.body);
-        return res.status(200).json({ success: true });
-      
-      case 'DELETE':
-        const { id } = req.body;
-        await api.deleteRoutingRule(id);
-        return res.status(200).json({ success: true });
-      
-      default:
-        return res.status(405).json({ error: 'Method not allowed' });
+export default apiHandler('admin', {
+  GET: async (req, res) => {
+    res.status(200).json(await getPurelyMail().listRoutingRules());
+  },
+  // PurelyMail has no "modify" endpoint; edit a rule by deleting and re-creating it.
+  POST: async (req, res) => {
+    const { domainName, matchUser, prefix, catchall, targetAddresses } = req.body || {};
+    if (!Array.isArray(targetAddresses) || targetAddresses.length === 0) {
+      throw new ApiError('At least one target address is required', 400);
     }
-  } catch (error: any) {
-    console.error('Routing rules API error:', error);
-    return res.status(500).json({ 
-      error: 'Failed to process request',
-      details: error.message 
+    await getPurelyMail().addRoutingRule({
+      domainName: requireString(domainName, 'domain'),
+      matchUser: typeof matchUser === 'string' ? matchUser.trim() : '',
+      prefix: Boolean(prefix),
+      catchall: Boolean(catchall),
+      targetAddresses: targetAddresses.map((a: unknown) => requireString(a, 'target address')),
     });
-  }
-}
+    res.status(200).json({ success: true });
+  },
+  DELETE: async (req, res) => {
+    await getPurelyMail().deleteRoutingRule(requireInt(req.body?.id, 'rule id'));
+    res.status(200).json({ success: true });
+  },
+});

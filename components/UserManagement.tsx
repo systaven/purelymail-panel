@@ -570,9 +570,14 @@ function UserCard({
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <h3 className="text-lg font-medium text-gray-900">
+            <h3 className="text-lg font-medium text-gray-900 break-all">
               {user.userName}
             </h3>
+            {(user as User & { ownerLabel?: string | null }).ownerLabel && (
+              <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800">
+                Owned by {(user as User & { ownerLabel?: string | null }).ownerLabel}
+              </span>
+            )}
           </div>
           
           <div className="flex flex-wrap gap-2 mb-3">

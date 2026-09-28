@@ -12,6 +12,10 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_OUTPUT=standalone
 ENV NEXT_TELEMETRY_DISABLED=1
+# Browser code gets the Clerk publishable key at build time:
+# docker build --build-arg NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_... .
+ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 RUN npm run build
 
 FROM node:22-bookworm-slim AS runner

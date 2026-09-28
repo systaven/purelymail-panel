@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CheckIcon, PencilIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, LockClosedIcon, PencilIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 interface Limits {
   maxMailboxes: number;
@@ -247,7 +247,7 @@ export default function GuestsAdmin() {
     }
   };
 
-  const assign = async (mailbox: string, clerkUserId: string | null) => {
+  const assign = async (mailbox: string, clerkUserId: string) => {
     try {
       await call('/api/admin/owners', 'PUT', { mailbox, clerk_user_id: clerkUserId });
       load();
@@ -264,7 +264,10 @@ export default function GuestsAdmin() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Guests</h1>
-        <p className="mt-2 text-gray-600">People who signed in with Clerk, what they may create, and their requests.</p>
+        <p className="mt-2 text-gray-600">
+          People who signed in with Clerk, what they may create, and their requests. Mailboxes that belong to a
+          user are private: you can delete them, but not read them or change their settings.
+        </p>
       </div>
 
       {notice && (
@@ -328,17 +331,18 @@ export default function GuestsAdmin() {
             </div>
             <div className="flex flex-wrap items-center gap-2 text-sm">
               {g.mailboxes.map((m) => (
-                <span key={m} className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-1 text-gray-700">
+                <span key={m} className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-1 text-gray-700" title="Private to this user">
+                  <LockClosedIcon className="h-3.5 w-3.5 text-gray-400" />
                   {m}
-                  <button title="Take back (the mailbox stays, owned by the admin)" className="text-gray-400 hover:text-red-600" onClick={() => {
-                    if (confirm(`Take ${m} back from ${label(g)}? The mailbox and its mail are kept.`)) assign(m, null);
-                  }}>
-                    <XMarkIcon className="h-3.5 w-3.5" />
-                  </button>
                 </span>
               ))}
               {unowned.length > 0 && (
-                <select className="rounded-md border border-gray-300 py-1 pl-2 pr-8 text-sm text-gray-700" value="" onChange={(e) => e.target.value && assign(e.target.value, g.clerk_user_id)}>
+                <select className="rounded-md border border-gray-300 py-1 pl-2 pr-8 text-sm text-gray-700" value="" onChange={(e) => {
+                  const m = e.target.value;
+                  if (m && confirm(`Give ${m} to ${label(g)}?\n\nThis can't be undone: the mailbox becomes private to them. Its password and recovery options are reset, forwarding for it is removed, and you can no longer open it; you'll only be able to delete it.`)) {
+                    assign(m, g.clerk_user_id);
+                  }
+                }}>
                   <option value="">Assign an existing mailbox...</option>
                   {unowned.map((m) => <option key={m} value={m}>{m}</option>)}
                 </select>

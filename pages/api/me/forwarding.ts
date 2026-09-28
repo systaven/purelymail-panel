@@ -53,7 +53,8 @@ export default apiHandler('user', {
       catchall: false,
       targetAddresses: keepCopy ? [mailbox, ...addresses] : addresses,
     });
-    await audit(session.actor, 'forwarding.set', mailbox, { targets: addresses, keepCopy: Boolean(keepCopy) });
+    // Where mail is forwarded stays private; the log only records that it changed.
+    await audit(session.actor, 'forwarding.set', mailbox);
     res.status(200).json({ success: true });
   },
 

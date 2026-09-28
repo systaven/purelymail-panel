@@ -1,6 +1,6 @@
 import { ImapFlow } from 'imapflow';
 import nodemailer, { Transporter } from 'nodemailer';
-import { getAppPassword, revokeAppPassword } from './credentials';
+import type { MailboxHandle } from './handle';
 
 const IMAP_HOST = process.env.MAIL_IMAP_HOST || 'imap.purelymail.com';
 const IMAP_PORT = Number(process.env.MAIL_IMAP_PORT || 993);
@@ -17,27 +17,27 @@ function isAuthError(error: any): boolean {
 
 // Runs `fn` with a password for the mailbox. If login fails (e.g. the app
 // password was deleted in PurelyMail), a fresh one is created and `fn` retried once.
-async function withPassword<T>(mailbox: string, fn: (password: string) => Promise<T>): Promise<T> {
+async function withPassword<T>(box: MailboxHandle, fn: (password: string) => Promise<T>): Promise<T> {
   try {
-    return await fn(await getAppPassword(mailbox));
+    return await fn(await box.credentials.get());
   } catch (error) {
     if (!isAuthError(error)) {
       throw error;
     }
-    await revokeAppPassword(mailbox);
-    return fn(await getAppPassword(mailbox));
+    await box.credentials.invalidate();
+    return fn(await box.credentials.get());
   }
 }
 
 // Opens an IMAP connection for the duration of `fn`. Connections are
 // per request because serverless hosts can't keep them open between requests.
-export function withImap<T>(mailbox: string, fn: (client: ImapFlow) => Promise<T>): Promise<T> {
-  return withPassword(mailbox, async (password) => {
+export function withImap<T>(box: MailboxHandle, fn: (client: ImapFlow) => Promise<T>): Promise<T> {
+  return withPassword(box, async (password) => {
     const client = new ImapFlow({
       host: IMAP_HOST,
       port: IMAP_PORT,
       secure: true,
-      auth: { user: mailbox, pass: password },
+      auth: { user: box.address, pass: password },
       logger: false,
       disableAutoIdle: true,
     });
@@ -51,15 +51,15 @@ export function withImap<T>(mailbox: string, fn: (client: ImapFlow) => Promise<T
 }
 
 export function withSmtp<T>(
-  mailbox: string,
+  box: MailboxHandle,
   fn: (transport: Transporter) => Promise<T>
 ): Promise<T> {
-  return withPassword(mailbox, async (password) => {
+  return withPassword(box, async (password) => {
     const transport = nodemailer.createTransport({
       host: SMTP_HOST,
       port: SMTP_PORT,
       secure: SMTP_SECURE,
-      auth: { user: mailbox, pass: password },
+      auth: { user: box.address, pass: password },
     });
     try {
       return await fn(transport);

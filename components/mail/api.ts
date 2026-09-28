@@ -48,6 +48,8 @@ export const mailApi = {
     post('/api/mail/messages', { mailbox, folder, uids, action, target }),
   send: (mailbox: string, message: OutgoingMessage) =>
     post('/api/mail/send', { mailbox, ...message }),
+  prepare: (mailbox: string) =>
+    post('/api/mail/credentials', { mailbox }),
   revoke: (mailbox: string) =>
     post('/api/mail/credentials', { mailbox }, 'DELETE'),
 };

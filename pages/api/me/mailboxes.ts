@@ -1,6 +1,6 @@
 import { ApiError, apiHandler } from '@/lib/api';
 import { audit, createRequest } from '@/lib/accounts';
-import { requireMailbox } from '@/lib/mail/route';
+import { openMailbox } from '@/lib/mail/route';
 import { checkNewAddress, createMailboxFor, deleteMailbox, getUsage } from '@/lib/provisioning';
 
 export default apiHandler('user', {
@@ -24,7 +24,10 @@ export default apiHandler('user', {
   },
 
   DELETE: async (req, res, session) => {
-    await deleteMailbox(await requireMailbox(session, req.body?.mailbox), session.actor);
+    const box = await openMailbox(session, req.body?.mailbox, req, res);
+    await deleteMailbox(box.address, session.actor);
+    // The mailbox (and its app passwords) are gone; drop this browser's copy too.
+    await box.credentials.invalidate();
     res.status(200).json({ success: true });
   },
 });

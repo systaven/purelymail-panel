@@ -294,6 +294,9 @@ export default function MyMailboxes() {
             ? ` Available domains: ${limits.allowedDomains.join(', ')}.`
             : ' No domains are open to you yet.'}
         </p>
+        <p className="mt-1 text-sm text-gray-500">
+          Your mailboxes are private: administrators can delete them but can't read your mail or change their settings.
+        </p>
       </div>
 
       {notice && (

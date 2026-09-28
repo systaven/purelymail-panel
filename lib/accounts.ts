@@ -158,6 +158,10 @@ export async function updateRequest(id: string, fields: Partial<MailboxRequest>)
   unwrap(await db().from('mailbox_requests').update(fields).eq('id', id), 'update request');
 }
 
+export async function deleteRequestsFor(mailbox: string): Promise<void> {
+  unwrap(await db().from('mailbox_requests').delete().eq('mailbox', mailbox), 'delete requests');
+}
+
 // --- Audit log --------------------------------------------------------------
 
 export async function audit(actor: string, action: string, target: string | null, details?: Record<string, unknown>): Promise<void> {

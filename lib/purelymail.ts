@@ -299,23 +299,17 @@ export class PurelyMailAPI {
     }
   }
 
-  async deletePasswordReset(userName: string, method: {
-    type: 'email' | 'phone';
-    target: string;
-  }): Promise<void> {
-    const response = await this.client.post('/deletePasswordReset', { 
-      userName,
-      ...method
-    });
+  async deletePasswordReset(userName: string, target: string): Promise<void> {
+    const response = await this.client.post('/deletePasswordReset', { userName, target });
     if (response.data.type !== 'success') {
       throw new Error(response.data.message || 'Failed to delete password reset method');
     }
   }
 
-  async listPasswordReset(userName: string): Promise<any[]> {
+  async listPasswordReset(userName: string): Promise<{ type: string; target: string; description: string }[]> {
     const response = await this.client.post('/listPasswordReset', { userName });
     if (response.data.type === 'success') {
-      return response.data.result.methods || [];
+      return response.data.result.users || [];
     }
     throw new Error(response.data.message || 'Failed to list password reset methods');
   }

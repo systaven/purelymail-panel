@@ -184,7 +184,7 @@ In `.env.local`, escape each `$` in the hash as `\$`, because Next.js expands `$
 
 ## Webmail
 
-The **Mail** page lets the admin open any mailbox in the account without knowing its password:
+The **Mail** page lets the admin open any mailbox nobody owns without knowing its password (mailboxes that belong to a user are private; see [Privacy](#privacy)):
 
 1. The first time a mailbox is opened, the panel creates a PurelyMail **app password** for it through the API (named "PurelyMail Panel webmail").
 2. The app password is encrypted with `MAIL_CREDENTIALS_KEY` (AES-256-GCM) and stored in Supabase, then reused for IMAP and SMTP logins.
@@ -212,13 +212,25 @@ With Clerk configured, the login page offers **Sign in** and **Create an account
 
 - **Guests** (everyone who signs up) see only **My mailboxes** and **Mail**. They can create or request mailboxes on the domains you open to them, up to their limit, and for their own mailboxes: read and send mail, set the password used by mail apps, set forwarding, and delete them.
 - **Admins**: the admin password always works. On **My account**, the password admin can link a Clerk account, which makes it an admin; on **Guests** you can also promote any Clerk user.
-- **Guests page** (admin): approve or reject requests, set the defaults (mailbox limit, whether approval is needed, domains open to all guests), adjust any user (role, disabled, limit, approval, extra domains), assign existing mailboxes to a user or take them back, and see the activity log.
+- **Guests page** (admin): approve or reject requests, set the defaults (mailbox limit, whether approval is needed, domains open to all guests), adjust any user (role, disabled, limit, approval, extra domains), assign existing mailboxes to a user (one way; see [Privacy](#privacy)), and see the activity log.
 
 Rules guests can't get around, enforced on the server:
 - Only their own mailboxes are reachable, in every API including webmail.
 - Forwarding is one exact-address rule for their own mailbox; no prefix or catch-all rules.
 - Role addresses such as `admin`, `postmaster`, `abuse` and `noreply` are reserved.
 - Pending requests count toward the limit, and an address can only be requested by one person at a time.
+
+### Privacy
+
+A mailbox that belongs to a user (created by or for them, or assigned to them) is private to that user:
+
+- **Admins can only delete it.** They can't open it in Mail, set its password, recovery options or forwarding, rename it, or see where it forwards. Deleting removes the mailbox and everything the panel kept about it (ownership, credentials, forwarding rules, requests).
+- **No server-side credentials.** Its webmail app password is kept only in the owner's browser, in an encrypted HttpOnly cookie bound to that user and address, and is deleted in PurelyMail when they sign out. Nothing is stored in Supabase.
+- **No interception.** Routing rules that would redirect mail addressed to a private mailbox are refused; catch-all rules, which never apply to existing users, are allowed.
+- **Handing over is one way.** Assigning an existing mailbox to a user resets its password to a random one, removes its recovery methods, forwarding and the admin's stored app password, and it can't be taken back afterwards.
+- The activity log records that forwarding changed, not where it points.
+
+Limits of this: whoever holds the PurelyMail API key or the PurelyMail account can still reset any mailbox's password in PurelyMail itself, and whoever controls the server could change its code. The panel separates what its own admins can do; it isn't end-to-end encryption.
 
 ### Setup
 

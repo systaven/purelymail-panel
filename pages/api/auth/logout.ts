@@ -1,7 +1,8 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { AUTH_COOKIE } from '@/lib/auth';
+import { appendSetCookie, revokePrivateCookies } from '@/lib/mail/handle';
 
-export default function handler(
+export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
@@ -10,12 +11,13 @@ export default function handler(
   }
 
   try {
+    // Private mailboxes' webmail passwords end with the session.
+    await revokePrivateCookies(req, res).catch((err) => console.warn('Revoking private credentials failed:', err.message));
+
     // Clear the authentication cookie
-    res.setHeader('Set-Cookie', [
-      `${AUTH_COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Strict${
-        process.env.NODE_ENV === 'production' ? '; Secure' : ''
-      }`
-    ]);
+    appendSetCookie(res, `${AUTH_COOKIE}=; HttpOnly; Path=/; Max-Age=0; SameSite=Strict${
+      process.env.NODE_ENV === 'production' ? '; Secure' : ''
+    }`);
 
     return res.status(200).json({ 
       success: true, 

@@ -8,7 +8,8 @@ import {
   ShieldCheckIcon,
   EnvelopeIcon,
   PencilIcon,
-  XMarkIcon
+  XMarkIcon,
+  LockClosedIcon
 } from '@heroicons/react/24/outline';
 import { User, Domain } from '@/lib/purelymail';
 
@@ -552,8 +553,13 @@ function UserCard({
 }) {
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const owned = user as User & { ownerLabel?: string | null; private?: boolean };
+
   const handleDelete = async () => {
-    if (!confirm(`Are you sure you want to delete user ${user.userName}?`)) {
+    const warning = owned.private
+      ? `Delete ${user.userName}? It belongs to ${owned.ownerLabel}. The mailbox and all of its mail are permanently deleted.`
+      : `Are you sure you want to delete user ${user.userName}?`;
+    if (!confirm(warning)) {
       return;
     }
 
@@ -573,12 +579,17 @@ function UserCard({
             <h3 className="text-lg font-medium text-gray-900 break-all">
               {user.userName}
             </h3>
-            {(user as User & { ownerLabel?: string | null }).ownerLabel && (
-              <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800">
-                Owned by {(user as User & { ownerLabel?: string | null }).ownerLabel}
+            {owned.private && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800">
+                <LockClosedIcon className="h-3 w-3" />
+                Private · {owned.ownerLabel}
               </span>
             )}
           </div>
+
+          {owned.private && (
+            <p className="text-sm text-gray-500">Only its owner can read it or change its settings. You can delete it.</p>
+          )}
           
           <div className="flex flex-wrap gap-2 mb-3">
             {user.enableSpamFiltering && (
@@ -614,6 +625,7 @@ function UserCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:ml-4 sm:shrink-0">
+          {!owned.private && (<>
           <Link
             href={{ pathname: '/mail', query: { mailbox: user.userName } }}
             className="btn-secondary text-sm flex items-center gap-2"
@@ -629,7 +641,8 @@ function UserCard({
             <PencilIcon className="h-4 w-4" />
             Edit
           </button>
-          
+          </>)}
+
           <button
             onClick={handleDelete}
             disabled={isDeleting}

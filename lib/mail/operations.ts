@@ -2,6 +2,7 @@ import { ImapFlow, FetchMessageObject, MessageStructureObject } from 'imapflow';
 import { simpleParser, AddressObject } from 'mailparser';
 import MailComposer from 'nodemailer/lib/mail-composer';
 import { withImap, withSmtp } from './connection';
+import type { MailboxHandle } from './handle';
 import { sanitizeEmailHtml } from './sanitize';
 import { ApiError as MailError } from '@/lib/errors';
 
@@ -124,8 +125,9 @@ async function downloadSource(client: ImapFlow, uid: number): Promise<Buffer> {
 // Mail errors carry an HTTP status like any other API error.
 export { ApiError as MailError } from '@/lib/errors';
 
-export function listFolders(mailbox: string): Promise<MailFolder[]> {
-  return withImap(mailbox, async (client) => {
+export function listFolders(
+  box: MailboxHandle): Promise<MailFolder[]> {
+  return withImap(box, async (client) => {
     const folders = await client.list({ statusQuery: { messages: true, unseen: true } });
     return folders
       .filter((f) => !f.flags.has('\\Noselect'))
@@ -147,11 +149,11 @@ export function listFolders(mailbox: string): Promise<MailFolder[]> {
 }
 
 export function listMessages(
-  mailbox: string,
+  box: MailboxHandle,
   folder: string,
   { page, pageSize, query }: { page: number; pageSize: number; query?: string }
 ): Promise<MessageList> {
-  return withImap(mailbox, async (client) => {
+  return withImap(box, async (client) => {
     const lock = await client.getMailboxLock(folder, { readOnly: true });
     try {
       const exists = client.mailbox ? client.mailbox.exists : 0;
@@ -193,12 +195,12 @@ export function listMessages(
 }
 
 export function getMessage(
-  mailbox: string,
+  box: MailboxHandle,
   folder: string,
   uid: number,
   { allowRemoteImages }: { allowRemoteImages: boolean }
 ): Promise<MessageDetail> {
-  return withImap(mailbox, async (client) => {
+  return withImap(box, async (client) => {
     const lock = await client.getMailboxLock(folder);
     try {
       const meta = await client.fetchOne(
@@ -253,12 +255,12 @@ export function getMessage(
 }
 
 export function getAttachment(
-  mailbox: string,
+  box: MailboxHandle,
   folder: string,
   uid: number,
   index: number
 ): Promise<{ filename: string; contentType: string; content: Buffer }> {
-  return withImap(mailbox, async (client) => {
+  return withImap(box, async (client) => {
     const lock = await client.getMailboxLock(folder, { readOnly: true });
     try {
       const parsed = await simpleParser(await downloadSource(client, uid));
@@ -278,13 +280,13 @@ export function getAttachment(
 }
 
 export function applyAction(
-  mailbox: string,
+  box: MailboxHandle,
   folder: string,
   uids: number[],
   action: MessageAction,
   target?: string
 ): Promise<void> {
-  return withImap(mailbox, async (client) => {
+  return withImap(box, async (client) => {
     const lock = await client.getMailboxLock(folder);
     try {
       const range = uids.join(',');
@@ -324,9 +326,10 @@ export function applyAction(
   });
 }
 
-export async function sendMessage(mailbox: string, message: OutgoingMessage): Promise<void> {
+export async function sendMessage(
+  box: MailboxHandle, message: OutgoingMessage): Promise<void> {
   const mail = {
-    from: mailbox,
+    from: box.address,
     to: message.to,
     cc: message.cc || undefined,
     bcc: message.bcc || undefined,
@@ -341,11 +344,11 @@ export async function sendMessage(mailbox: string, message: OutgoingMessage): Pr
     })),
   };
 
-  await withSmtp(mailbox, (transport) => transport.sendMail(mail));
+  await withSmtp(box, (transport) => transport.sendMail(mail));
 
   // SMTP doesn't store a copy, so save one to the Sent folder (without Bcc headers).
   const raw = await new MailComposer({ ...mail, bcc: undefined }).compile().build();
-  await withImap(mailbox, async (client) => {
+  await withImap(box, async (client) => {
     const sent = await findSpecialFolder(client, '\\Sent');
     if (sent) {
       await client.append(sent, raw, ['\\Seen']);

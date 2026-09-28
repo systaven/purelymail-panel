@@ -1,5 +1,5 @@
 import { MailError, OutgoingMessage, sendMessage } from '@/lib/mail/operations';
-import { mailHandler, requireMailbox, requireString } from '@/lib/mail/route';
+import { mailHandler, openMailbox, requireString } from '@/lib/mail/route';
 
 // Attachments arrive base64-encoded in the JSON body (about 4/3 of their size).
 export const config = {
@@ -26,7 +26,7 @@ export default mailHandler({
         content: requireString(a?.content, 'attachment content'),
       })),
     };
-    await sendMessage(await requireMailbox(session, mailbox), message);
+    await sendMessage(await openMailbox(session, mailbox, req, res), message);
     res.status(200).json({ success: true });
   },
 });

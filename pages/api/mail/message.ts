@@ -1,10 +1,10 @@
 import { getMessage } from '@/lib/mail/operations';
-import { mailHandler, requireMailbox, requireString, requireUid } from '@/lib/mail/route';
+import { mailHandler, openMailbox, requireString, requireUid } from '@/lib/mail/route';
 
 export default mailHandler({
   GET: async (req, res, session) => {
     const message = await getMessage(
-      await requireMailbox(session, req.query.mailbox),
+      await openMailbox(session, req.query.mailbox, req, res),
       requireString(req.query.folder, 'folder'),
       requireUid(req.query.uid),
       { allowRemoteImages: req.query.images === '1' }

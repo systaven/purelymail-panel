@@ -1,5 +1,5 @@
 import { getAttachment } from '@/lib/mail/operations';
-import { mailHandler, requireMailbox, requireString, requireUid } from '@/lib/mail/route';
+import { mailHandler, openMailbox, requireString, requireUid } from '@/lib/mail/route';
 
 export const config = {
   api: { responseLimit: false },
@@ -8,7 +8,7 @@ export const config = {
 export default mailHandler({
   GET: async (req, res, session) => {
     const attachment = await getAttachment(
-      await requireMailbox(session, req.query.mailbox),
+      await openMailbox(session, req.query.mailbox, req, res),
       requireString(req.query.folder, 'folder'),
       requireUid(req.query.uid),
       requireUid(req.query.index, 'index')

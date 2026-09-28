@@ -1,10 +1,18 @@
-import { apiHandler, requireEmail } from '@/lib/api';
-import { audit, getOwner, listAllOwners, listUsers, setOwner } from '@/lib/accounts';
+import { ApiError, apiHandler, requireEmail } from '@/lib/api';
+import { audit, getOwner, listAllOwners, listUsers } from '@/lib/accounts';
 import { forgetAppPassword } from '@/lib/mail/credentials';
 import { getPurelyMail } from '@/lib/purelymail';
+import { deleteMailbox } from '@/lib/provisioning';
+
+// Mailboxes owned by a user are private: the admin sees that they exist and
+// can delete them, nothing more.
+async function assertNotPrivate(mailbox: string) {
+  if (await getOwner(mailbox)) {
+    throw new ApiError('This mailbox is private to its owner; it can only be deleted', 403);
+  }
+}
 
 export default apiHandler('admin', {
-  // Every mailbox in the account, with its owner (if a guest owns it).
   GET: async (req, res) => {
     const [users, owners, panelUsers] = await Promise.all([
       getPurelyMail().listUsers(),
@@ -15,7 +23,9 @@ export default apiHandler('admin', {
     const emailOf = new Map(panelUsers.map((u) => [u.clerk_user_id, u.email || u.name || u.clerk_user_id]));
     res.status(200).json(users.map((u) => {
       const owner = ownerOf.get(u.userName.toLowerCase()) || null;
-      return { ...u, owner, ownerLabel: owner ? emailOf.get(owner) || owner : null };
+      if (!owner) return { ...u, owner: null, ownerLabel: null, private: false };
+      // Only the address and who owns it; not the mailbox's settings.
+      return { userName: u.userName, owner, ownerLabel: emailOf.get(owner) || owner, private: true };
     }));
   },
 
@@ -27,7 +37,9 @@ export default apiHandler('admin', {
 
   PATCH: async (req, res, session) => {
     const { userName: currentUserName, newUserName, password, ...userSettings } = req.body || {};
-    const updateData: any = { userName: requireEmail(currentUserName), ...userSettings };
+    const oldName = requireEmail(currentUserName);
+    await assertNotPrivate(oldName);
+    const updateData: any = { userName: oldName, ...userSettings };
     if (newUserName && newUserName !== currentUserName) {
       updateData.newUserName = newUserName;
     }
@@ -36,27 +48,17 @@ export default apiHandler('admin', {
     }
     await getPurelyMail().modifyUser(updateData);
     if (updateData.newUserName) {
-      // Keep the owner on the renamed address; the stored app password was for the old name.
-      const oldName = updateData.userName;
-      const newName = String(updateData.newUserName).toLowerCase();
-      const owner = await getOwner(oldName);
-      await Promise.all([
-        owner ? setOwner(oldName, null).then(() => setOwner(newName, owner)) : Promise.resolve(),
-        forgetAppPassword(oldName),
-      ]).catch((err) => console.warn(`Cleanup after renaming ${oldName} failed:`, err.message));
+      // The stored app password was for the old name.
+      await forgetAppPassword(oldName).catch((err) => console.warn(`Cleanup after renaming ${oldName} failed:`, err.message));
     }
-    await audit(session.actor, 'mailbox.update', currentUserName, { renamedTo: updateData.newUserName, passwordChanged: Boolean(password) });
+    await audit(session.actor, 'mailbox.update', oldName, { renamedTo: updateData.newUserName, passwordChanged: Boolean(password) });
     res.status(200).json({ success: true });
   },
 
+  // Deleting works for any mailbox, private ones included, and removes
+  // everything the panel kept about it.
   DELETE: async (req, res, session) => {
-    const mailbox = requireEmail(req.body?.userName);
-    await getPurelyMail().deleteUser(mailbox);
-    // Clean up panel data for the mailbox; the PurelyMail deletion already succeeded.
-    await Promise.all([setOwner(mailbox, null), forgetAppPassword(mailbox)]).catch((err) =>
-      console.warn(`Cleanup after deleting ${mailbox} failed:`, err.message)
-    );
-    await audit(session.actor, 'mailbox.delete', mailbox);
+    await deleteMailbox(requireEmail(req.body?.userName), session.actor);
     res.status(200).json({ success: true });
   },
 });

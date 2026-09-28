@@ -142,17 +142,30 @@ export default function MailClient() {
     }
   }, [router.isReady, router.query.mailbox, mailboxes]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const loadFolders = useCallback(async () => {
+  // Credentials are set up once per mailbox before mail loads in parallel.
+  const [readyMailbox, setReadyMailbox] = useState('');
+  useEffect(() => {
     if (!mailbox) return;
+    let cancelled = false;
+    setReadyMailbox('');
+    mailApi.prepare(mailbox)
+      .catch(() => {}) // the loads below report the error
+      .finally(() => { if (!cancelled) setReadyMailbox(mailbox); });
+    return () => { cancelled = true; };
+  }, [mailbox]);
+  const ready = Boolean(mailbox) && readyMailbox === mailbox;
+
+  const loadFolders = useCallback(async () => {
+    if (!ready) return;
     try {
       setFolders(await mailApi.folders(mailbox));
     } catch (err: any) {
       setListError(err.message);
     }
-  }, [mailbox]);
+  }, [mailbox, ready]);
 
   const loadList = useCallback(async (silent = false) => {
-    if (!mailbox) return;
+    if (!ready) return;
     const id = ++listRequest.current;
     if (!silent) {
       setListLoading(true);
@@ -166,7 +179,7 @@ export default function MailClient() {
     } finally {
       if (id === listRequest.current) setListLoading(false);
     }
-  }, [mailbox, folder, page, search]);
+  }, [mailbox, folder, page, search, ready]);
 
   useEffect(() => { loadFolders(); }, [loadFolders]);
   useEffect(() => { loadList(); }, [loadList]);

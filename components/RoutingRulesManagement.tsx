@@ -129,7 +129,11 @@ export default function RoutingRulesManagement() {
           <div key={rule.id} className="card flex flex-wrap items-center gap-3">
             <div className="mr-auto min-w-0">
               <div className="break-all font-medium text-gray-900">{describeMatch(rule)}</div>
-              <div className="break-all text-sm text-gray-600">→ {rule.targetAddresses.join(', ')}</div>
+              <div className="break-all text-sm text-gray-600">
+                {(rule as RoutingRule & { private?: boolean }).private
+                  ? 'Forwarding set by the mailbox owner (private)'
+                  : `→ ${rule.targetAddresses.join(', ')}`}
+              </div>
             </div>
             <button className="btn-danger flex items-center gap-1 text-sm" onClick={() => remove(rule)}>
               <TrashIcon className="h-4 w-4" /> Delete

@@ -75,8 +75,8 @@ export default function ComposeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="flex max-h-full w-full max-w-3xl flex-col rounded-lg bg-white shadow-xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 sm:p-4">
+      <div className="flex h-full w-full flex-col bg-surface shadow-xl sm:h-auto sm:max-h-full sm:max-w-3xl sm:rounded-lg">
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
           <h2 className="text-lg font-semibold text-gray-900">
             {title}
@@ -86,7 +86,7 @@ export default function ComposeModal({
           </button>
         </div>
 
-        <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
+        <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-4 sm:px-5">
           <div className="text-sm text-gray-500">
             From <span className="font-medium text-gray-900">{mailbox}</span>
           </div>
@@ -106,7 +106,7 @@ export default function ComposeModal({
           )}
           <input className="form-input" placeholder="Subject" value={draft.subject} onChange={update('subject')} />
           <textarea
-            className="form-input min-h-[18rem] font-mono text-sm"
+            className="form-input min-h-[12rem] flex-1 font-mono text-sm sm:min-h-[18rem]"
             value={draft.text}
             onChange={update('text')}
             autoFocus

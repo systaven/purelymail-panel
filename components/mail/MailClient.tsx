@@ -12,6 +12,7 @@ import {
   ArchiveBoxIcon,
   ExclamationTriangleIcon,
   DocumentIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 import {
   formatAddress,
@@ -107,6 +108,7 @@ export default function MailClient() {
   const [compose, setCompose] = useState<{ title: string; draft: ComposeDraft } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [setupError, setSetupError] = useState<string | null>(null);
+  const [foldersOpen, setFoldersOpen] = useState(false);
 
   // Ignore responses that arrive after the user switched mailbox/folder/page.
   const listRequest = useRef(0);
@@ -229,6 +231,7 @@ export default function MailClient() {
   };
 
   const selectFolder = (path: string) => {
+    setFoldersOpen(false);
     setFolder(path);
     setPage(0);
     setSearch('');
@@ -261,13 +264,55 @@ export default function MailClient() {
 
   const currentFolder = folders.find((f) => f.path === folder);
 
+  const folderList = (
+    <div className="py-2">
+      {folders.map((f) => {
+        const Icon = (f.specialUse && FOLDER_ICONS[f.specialUse]) || FolderIcon;
+        const depth = f.path.split(f.delimiter || '/').length - 1;
+        return (
+          <button
+            key={f.path}
+            onClick={() => selectFolder(f.path)}
+            className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm lg:py-1.5 ${
+              f.path === folder ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100'
+            }`}
+            style={{ paddingLeft: `${0.75 + depth * 0.75}rem` }}
+          >
+            <Icon className="h-4 w-4 shrink-0" />
+            <span className="truncate">{f.name}</span>
+            {f.unseen > 0 && <span className="ml-auto text-xs font-semibold">{f.unseen}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  // On phones only one pane shows at a time: the reader once a message is picked.
+  const readerOpen = selectedUid !== null;
+  const closeReader = () => {
+    messageRequest.current++;
+    setSelectedUid(null);
+    setMessage(null);
+    setMessageError(null);
+    setMessageLoading(false);
+  };
+
   return (
     <>
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-3xl font-bold text-gray-900">Mail</h1>
+    <div className="flex h-[calc(100dvh-4.5rem)] flex-col gap-2 sm:h-[calc(100dvh-5.5rem)] sm:gap-3 lg:h-[calc(100dvh-3rem)]">
+      <div className="flex flex-wrap items-center gap-2">
+        <h1 className="hidden text-3xl font-bold text-gray-900 lg:block lg:mr-2">Mail</h1>
+        <button
+          onClick={() => setFoldersOpen(true)}
+          className="btn-secondary flex min-w-0 items-center gap-2 text-sm lg:hidden"
+          aria-label="Folders"
+        >
+          <FolderIcon className="h-4 w-4 shrink-0" />
+          <span className="max-w-[7rem] truncate">{currentFolder?.name || 'Folders'}</span>
+          {(currentFolder?.unseen ?? 0) > 0 && <span className="text-xs font-semibold">{currentFolder?.unseen}</span>}
+        </button>
         <select
-          className="rounded-md border border-gray-300 py-2 pl-3 pr-8 text-sm"
+          className="min-w-0 flex-1 rounded-md border border-gray-300 py-2 pl-3 pr-8 text-sm lg:flex-none"
           value={mailbox}
           onChange={(e) => changeMailbox(e.target.value)}
           aria-label="Mailbox"
@@ -275,17 +320,19 @@ export default function MailClient() {
           {mailboxes.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
         <form
-          className="relative min-w-[14rem] flex-1"
+          className="relative order-last w-full lg:order-none lg:w-auto lg:min-w-[14rem] lg:flex-1"
           onSubmit={(e) => {
             e.preventDefault();
             setPage(0);
             setSearch(searchInput.trim());
+            closeReader();
           }}
         >
           <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
           <input
+            type="search"
             className="form-input pl-9 text-sm"
-            placeholder={`Search ${currentFolder?.name || 'folder'} (subject, sender, body)`}
+            placeholder={`Search ${currentFolder?.name || 'folder'}`}
             value={searchInput}
             onChange={(e) => {
               setSearchInput(e.target.value);
@@ -296,12 +343,12 @@ export default function MailClient() {
             }}
           />
         </form>
-        <button onClick={refresh} className="btn-secondary flex items-center gap-2 text-sm" title="Refresh">
+        <button onClick={refresh} className="btn-secondary flex items-center gap-2 px-3 text-sm" title="Refresh" aria-label="Refresh">
           <ArrowPathIcon className={`h-4 w-4 ${listLoading ? 'animate-spin' : ''}`} />
         </button>
-        <button onClick={revokeAccess} className="btn-secondary flex items-center gap-2 text-sm" title="Delete the panel's app password for this mailbox">
+        <button onClick={revokeAccess} className="btn-secondary hidden items-center gap-2 px-3 text-sm sm:flex" title="Delete the panel's app password for this mailbox" aria-label="Reset access">
           <KeyIcon className="h-4 w-4" />
-          Reset access
+          <span className="hidden xl:inline">Reset access</span>
         </button>
         <button
           onClick={() => setCompose({ title: 'New message', draft: emptyDraft })}
@@ -309,40 +356,23 @@ export default function MailClient() {
           disabled={!mailbox}
         >
           <PencilSquareIcon className="h-4 w-4" />
-          Compose
+          <span className="hidden sm:inline">Compose</span>
         </button>
       </div>
 
       {notice && (
-        <div className="flex items-center justify-between rounded-md bg-blue-50 px-4 py-2 text-sm text-blue-800">
+        <div className="flex items-center justify-between gap-3 rounded-md bg-blue-50 px-4 py-2 text-sm text-blue-800">
           {notice}
           <button onClick={() => setNotice(null)} className="font-medium">Dismiss</button>
         </div>
       )}
 
-      <div className="grid h-[calc(100vh-12rem)] min-h-[28rem] grid-cols-[12rem,22rem,1fr] overflow-hidden rounded-lg border border-gray-200 bg-white shadow-md">
-        <nav className="overflow-y-auto border-r border-gray-200 py-2">
-          {folders.map((f) => {
-            const Icon = (f.specialUse && FOLDER_ICONS[f.specialUse]) || FolderIcon;
-            const depth = f.path.split(f.delimiter || '/').length - 1;
-            return (
-              <button
-                key={f.path}
-                onClick={() => selectFolder(f.path)}
-                className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm ${
-                  f.path === folder ? 'bg-primary-100 text-primary-700' : 'text-gray-700 hover:bg-gray-100'
-                }`}
-                style={{ paddingLeft: `${0.75 + depth * 0.75}rem` }}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className="truncate">{f.name}</span>
-                {f.unseen > 0 && <span className="ml-auto text-xs font-semibold">{f.unseen}</span>}
-              </button>
-            );
-          })}
+      <div className="flex min-h-0 flex-1 overflow-hidden rounded-lg border border-gray-200 bg-surface shadow-sm">
+        <nav className="hidden w-48 shrink-0 overflow-y-auto border-r border-gray-200 lg:block" aria-label="Folders">
+          {folderList}
         </nav>
 
-        <div className="min-h-0 border-r border-gray-200">
+        <div className={`min-h-0 w-full border-gray-200 md:block md:w-80 md:shrink-0 md:border-r xl:w-96 ${readerOpen ? 'hidden' : 'block'}`}>
           <MessageListPane
             list={list}
             loading={listLoading}
@@ -362,7 +392,7 @@ export default function MailClient() {
           />
         </div>
 
-        <div className="min-h-0">
+        <div className={`min-h-0 min-w-0 flex-1 md:block ${readerOpen ? 'block' : 'hidden'}`}>
           <MessageView
             mailbox={mailbox}
             folder={folder}
@@ -371,6 +401,7 @@ export default function MailClient() {
             loading={messageLoading}
             error={messageError}
             showImages={showImages}
+            onBack={closeReader}
             onShowImages={() => message && openMessage(message.uid, true)}
             onReply={(mode) => message && setCompose({
               title: mode === 'forward' ? 'Forward' : 'Reply',
@@ -384,6 +415,21 @@ export default function MailClient() {
         </div>
       </div>
     </div>
+
+      {foldersOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Folders">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setFoldersOpen(false)} />
+          <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw] overflow-y-auto bg-surface shadow-xl">
+            <div className="flex h-14 items-center justify-between border-b border-gray-200 px-4">
+              <span className="font-semibold text-gray-900">Folders</span>
+              <button onClick={() => setFoldersOpen(false)} className="rounded-md p-1 text-gray-500 hover:bg-gray-100" aria-label="Close folders">
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            {folderList}
+          </div>
+        </div>
+      )}
 
       {compose && (
         <ComposeModal

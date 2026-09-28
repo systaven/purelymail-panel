@@ -11,7 +11,7 @@ A comprehensive web-based management panel for the PurelyMail API, built with Ne
 - ⚙️ **Account Settings** - Manage account information and view usage statistics
 - ✉️ **Webmail** - Read, search, organize and send mail from any mailbox in the account (see [Webmail](#webmail))
 - 👥 **Guest accounts** - People sign up with Clerk and manage their own mailboxes within limits you set (see [Guest accounts](#guest-accounts))
-- 🎨 **Modern UI** - Responsive design with Tailwind CSS
+- 🎨 **Modern UI** - Light and dark themes (follows the system, or pick one), works on phones and tablets; Mail switches to one pane at a time on small screens
 - 🔐 **Secure API** - Server-side API key management
 - ☁️ **Deploy anywhere** - Vercel, Appwrite Sites or Docker
 

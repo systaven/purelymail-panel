@@ -56,7 +56,7 @@ function AddDomainForm({ onSuccess }: { onSuccess: () => void }) {
       )}
 
       <div className="flex gap-4">
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <label htmlFor="domainName" className="form-label">
             Domain Name
           </label>
@@ -128,12 +128,12 @@ function DomainCard({ domain, onDelete }: { domain: Domain; onDelete: (name: str
 
   return (
     <div className="card">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-3">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2 mb-3">
             <div className="flex items-center gap-2">
               <GlobeAltIcon className="h-5 w-5 text-gray-400" />
-              <h3 className="text-lg font-medium text-gray-900">{domain.name}</h3>
+              <h3 className="break-all text-lg font-medium text-gray-900">{domain.name}</h3>
             </div>
             
             <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
@@ -213,7 +213,7 @@ function DomainCard({ domain, onDelete }: { domain: Domain; onDelete: (name: str
           </div>
         </div>
 
-        <div className="flex items-center gap-2 ml-4">
+        <div className="flex flex-wrap items-center gap-2 sm:ml-4 sm:shrink-0">
           <button
             onClick={() => setShowDetails(!showDetails)}
             className="btn-secondary text-sm flex items-center gap-2"

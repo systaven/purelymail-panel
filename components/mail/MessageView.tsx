@@ -1,4 +1,5 @@
 import {
+  ArrowLeftIcon,
   ArrowUturnLeftIcon,
   ArrowUturnRightIcon,
   EnvelopeIcon,
@@ -31,6 +32,7 @@ export default function MessageView({
   loading,
   error,
   showImages,
+  onBack,
   onShowImages,
   onReply,
   onToggleFlag,
@@ -45,6 +47,8 @@ export default function MessageView({
   loading: boolean;
   error: string | null;
   showImages: boolean;
+  // Back to the list; shown on phones, where the reader replaces the list.
+  onBack: () => void;
   onShowImages: () => void;
   onReply: (mode: ReplyMode) => void;
   onToggleFlag: () => void;
@@ -52,15 +56,25 @@ export default function MessageView({
   onMove: (target: string) => void;
   onDelete: () => void;
 }) {
-  if (loading) {
+  const backButton = (
+    <button className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-800 md:hidden" onClick={onBack} title="Back" aria-label="Back to messages">
+      <ArrowLeftIcon className="h-5 w-5" />
+    </button>
+  );
+
+  if (loading || error) {
     return (
-      <div className="flex h-full items-center justify-center text-gray-500">
-        <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary-600" />
+      <div className="flex h-full flex-col">
+        <div className="border-b border-gray-200 px-2 py-2 md:hidden">{backButton}</div>
+        {loading ? (
+          <div className="flex flex-1 items-center justify-center text-gray-500">
+            <div className="h-6 w-6 animate-spin rounded-full border-b-2 border-primary-600" />
+          </div>
+        ) : (
+          <div className="m-4 rounded-md bg-red-50 p-4 text-sm text-red-700">{error}</div>
+        )}
       </div>
     );
-  }
-  if (error) {
-    return <div className="m-4 rounded-md bg-red-50 p-4 text-sm text-red-700">{error}</div>;
   }
   if (!message) {
     return (
@@ -75,13 +89,15 @@ export default function MessageView({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-gray-200 px-5 py-4">
-        <div className="mb-3 flex items-center gap-1">
+      <div className="max-h-[45%] overflow-y-auto border-b border-gray-200 px-3 py-3 sm:px-5 sm:py-4">
+        <div className="mb-3 flex flex-wrap items-center gap-1">
+          {backButton}
           <button className={iconButton} onClick={() => onReply('reply')} title="Reply">
             <ArrowUturnLeftIcon className="h-5 w-5" />
           </button>
           <button className={`${iconButton} text-sm font-medium`} onClick={() => onReply('replyAll')} title="Reply all">
-            Reply all
+            <span className="hidden sm:inline">Reply all</span>
+            <span className="sm:hidden">All</span>
           </button>
           <button className={iconButton} onClick={() => onReply('forward')} title="Forward">
             <ArrowUturnRightIcon className="h-5 w-5" />
@@ -94,7 +110,7 @@ export default function MessageView({
             <EnvelopeIcon className="h-5 w-5" />
           </button>
           <select
-            className="ml-1 rounded-md border border-gray-300 py-1 pl-2 pr-8 text-sm text-gray-700"
+            className="ml-1 w-28 rounded-md border border-gray-300 py-1 pl-2 pr-8 text-sm text-gray-700 sm:w-auto"
             value=""
             onChange={(e) => e.target.value && onMove(e.target.value)}
             title="Move to folder"
@@ -109,8 +125,8 @@ export default function MessageView({
           </button>
         </div>
 
-        <h2 className="text-xl font-semibold text-gray-900">{message.subject}</h2>
-        <dl className="mt-2 grid grid-cols-[auto,1fr] gap-x-3 gap-y-0.5 text-sm">
+        <h2 className="break-words text-lg font-semibold text-gray-900 sm:text-xl">{message.subject}</h2>
+        <dl className="mt-2 grid grid-cols-[auto,1fr] gap-x-3 gap-y-0.5 break-words text-sm [&_dd]:min-w-0">
           <dt className="text-gray-500">From</dt>
           <dd className="text-gray-900">{formatAddresses(message.from)}</dd>
           <dt className="text-gray-500">To</dt>
@@ -151,14 +167,15 @@ export default function MessageView({
 
       <div className="min-h-0 flex-1">
         {message.html ? (
+          // Most HTML mail assumes a light background, so it stays white in dark mode.
           <iframe
             title="Message body"
-            className="h-full w-full"
+            className="h-full w-full bg-white"
             sandbox="allow-popups allow-popups-to-escape-sandbox"
             srcDoc={buildSrcDoc(message.html, showImages)}
           />
         ) : (
-          <pre className="h-full overflow-auto whitespace-pre-wrap break-words p-5 font-sans text-sm text-gray-900">
+          <pre className="h-full overflow-auto whitespace-pre-wrap break-words p-4 font-sans text-sm text-gray-900 sm:p-5">
             {message.text}
           </pre>
         )}

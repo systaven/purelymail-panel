@@ -6,11 +6,27 @@
   html {
     font-family: 'Inter', system-ui, sans-serif;
   }
+
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+
+  /* Native controls otherwise stay white in dark mode. */
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    @apply bg-surface text-gray-900;
+  }
+
+  input[type='checkbox'],
+  input[type='radio'] {
+    @apply bg-surface text-primary-600;
+  }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-primary-600 hover:bg-primary-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200;
+    @apply bg-primary-600 hover:bg-primary-700 dark:hover:bg-primary-500 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200;
   }
   
   .btn-secondary {
@@ -18,15 +34,15 @@
   }
   
   .btn-danger {
-    @apply bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200;
+    @apply bg-red-600 hover:bg-red-700 dark:hover:bg-red-500 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200;
   }
   
   .card {
-    @apply bg-white rounded-lg shadow-md border border-gray-200 p-6;
+    @apply bg-surface rounded-lg shadow-md border border-gray-200 p-6;
   }
   
   .form-input {
-    @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500;
+    @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder:text-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500;
   }
   
   .form-label {

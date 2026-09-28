@@ -376,8 +376,8 @@ function EditUserModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div className="fixed inset-0 z-50 h-full w-full overflow-y-auto bg-black/40 px-4">
+      <div className="relative mx-auto my-10 w-full max-w-md rounded-md border border-gray-200 bg-surface p-5 shadow-lg sm:my-20">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-medium text-gray-900">
             Edit User: {user.userName}
@@ -567,9 +567,9 @@ function UserCard({
 
   return (
     <div className="card">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
             <h3 className="text-lg font-medium text-gray-900 break-all">
               {user.userName}
             </h3>
@@ -613,7 +613,7 @@ function UserCard({
           )}
         </div>
 
-        <div className="flex items-center gap-2 ml-4">
+        <div className="flex flex-wrap items-center gap-2 sm:ml-4 sm:shrink-0">
           <Link
             href={{ pathname: '/mail', query: { mailbox: user.userName } }}
             className="btn-secondary text-sm flex items-center gap-2"

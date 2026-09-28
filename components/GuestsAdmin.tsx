@@ -159,7 +159,7 @@ function EditGuestModal({ guest, domains, settings, onClose, onSaved }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="max-h-full w-full max-w-lg overflow-y-auto rounded-lg bg-white shadow-xl">
+      <div className="max-h-full w-full max-w-lg overflow-y-auto rounded-lg bg-surface shadow-xl">
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
           <h2 className="truncate text-lg font-semibold text-gray-900">{label(guest)}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Close"><XMarkIcon className="h-5 w-5" /></button>

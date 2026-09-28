@@ -3,7 +3,7 @@ import MailClient from '@/components/mail/MailClient';
 
 export default function MailPage() {
   return (
-    <Layout title="Mail - PurelyMail Management">
+    <Layout title="Mail - PurelyMail Management" wide>
       <MailClient />
     </Layout>
   );

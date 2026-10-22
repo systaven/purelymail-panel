@@ -10,6 +10,7 @@ A comprehensive web-based management panel for the PurelyMail API, built with Ne
 - 🔀 **Routing Rules** - Configure email routing and forwarding rules
 - ⚙️ **Account Settings** - Manage account information and view usage statistics
 - ✉️ **Webmail** - Read, search, organize and send mail from any mailbox in the account (see [Webmail](#webmail))
+- 📅 **Calendar and contacts** - View and edit a mailbox's PurelyMail calendars and address books over CalDAV/CardDAV (see [Calendar and contacts](#calendar-and-contacts))
 - 👥 **Guest accounts** - People sign up with Clerk and manage their own mailboxes within limits you set (see [Guest accounts](#guest-accounts))
 - 🌐 **Languages** - English, 简体中文, 繁體中文 and 日本語; picked from the browser and switchable in the sidebar and on the login page (Clerk's screens follow along)
 - 🎨 **Modern UI** - Light and dark themes (follows the system, or pick one), works on phones and tablets; Mail switches to one pane at a time on small screens
@@ -171,6 +172,7 @@ The application integrates with the following PurelyMail API endpoints:
 | `MAIL_CREDENTIALS_KEY` | Random secret that encrypts stored app passwords (e.g. `openssl rand -base64 32`) | For webmail |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` / `CLERK_SECRET_KEY` | Clerk keys; turn on guest sign-up and sign-in | For guests |
 | `CLERK_JWT_KEY` | Clerk's JWT public key, to verify sessions without a network call | No |
+| `DAV_BASE_URL` | Override the CalDAV/CardDAV server (default `https://purelymail.com/webdav/`) | No |
 | `MAIL_IMAP_HOST` / `MAIL_IMAP_PORT` / `MAIL_SMTP_HOST` / `MAIL_SMTP_PORT` / `MAIL_SMTP_SECURE` | Override the mail servers (default `imap.purelymail.com:993`, `smtp.purelymail.com:465` with implicit TLS; STARTTLS is used for ports 587 and 25 unless `MAIL_SMTP_SECURE=true`) | No |
 
 ### Using a hashed admin password
@@ -206,6 +208,20 @@ The mailbox's owner can see this app password in their PurelyMail settings. If `
 - Forwarding includes the original text but not its attachments.
 - Messages are composed as plain text.
 - On Appwrite Sites, requests time out after 15 seconds by default. Raising the site timeout (Settings → Timeout, up to 30 seconds) helps with large mailboxes and searches.
+
+### Keyboard shortcuts
+
+Press `?` on the Mail page for the list: `j`/`k` next/previous message, `u` or `Esc` back to the list, `r` reply, `a` reply all, `f` forward, `s` star, `Shift+U` mark unread, `e` archive, `#` delete, `x` select, `c` compose, `/` search, and `Ctrl`/`⌘`+`Enter` to send. The open folder and message are part of the URL, so they survive a reload and the back button returns to the list. A new message is kept in the browser until it is sent or discarded.
+
+## Calendar and contacts
+
+The **Calendar** and **Contacts** pages read and edit the mailbox's calendars and address books on PurelyMail's CalDAV/CardDAV server (`https://purelymail.com/webdav/`), using the same app password as Mail and the same privacy rules: a user's own mailboxes are visible only to them.
+
+- Calendar: month and agenda views, create, edit and delete events (timed or all-day). Recurring events are shown on every occurrence; editing one changes the title, location and notes of the whole series, not its schedule.
+- Contacts: search, create, edit and delete contacts (name, organization, emails, phones, note). Other fields on a contact (photos, addresses...) are kept when it's edited. **Email** opens a new message in Mail.
+- Changes made elsewhere at the same time are detected (ETags): the panel asks you to reload instead of overwriting them.
+- Calendars and address books themselves are created in a CalDAV/CardDAV app (Thunderbird, DAVx⁵, Apple Calendar...); the panel works with the ones that exist. Meeting invitations (iTIP) aren't sent.
+- `DAV_BASE_URL` overrides the server (for testing against another CalDAV server).
 
 ## Guest accounts
 

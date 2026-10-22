@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import { PaperClipIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useLocale, useT } from '@/lib/i18n';
 import { commonMessages } from '@/lib/i18n/messages/common';
 import { mailMessages } from '@/lib/i18n/messages/mail';
 import { useErrorText } from '@/lib/i18n/useErrorText';
 import { formatSize, OutgoingMessage } from './api';
+import { modKey } from './ui';
 
 // Kept well below the send route's 15mb body limit, since base64 adds a third.
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
@@ -21,6 +23,30 @@ export interface ComposeDraft {
 
 export const emptyDraft: ComposeDraft = { to: '', cc: '', bcc: '', subject: '', text: '' };
 
+// An unsent new message is kept in this browser until it's sent or discarded,
+// so a reload or a closed tab doesn't lose it. Attachments aren't kept.
+const draftKey = (mailbox: string) => `mail-draft:${mailbox}`;
+
+function loadDraft(mailbox: string): ComposeDraft | null {
+  try {
+    const saved = JSON.parse(localStorage.getItem(draftKey(mailbox)) || 'null');
+    return saved && typeof saved.text === 'string' ? { ...emptyDraft, ...saved } : null;
+  } catch {
+    return null;
+  }
+}
+
+function storeDraft(mailbox: string, draft: ComposeDraft | null) {
+  try {
+    if (draft) localStorage.setItem(draftKey(mailbox), JSON.stringify(draft));
+    else localStorage.removeItem(draftKey(mailbox));
+  } catch {
+    // Storage may be full or blocked; the draft just isn't kept.
+  }
+}
+
+const isBlank = (d: ComposeDraft) => !d.to.trim() && !d.cc.trim() && !d.bcc.trim() && !d.subject.trim() && !d.text.trim();
+
 function readAsBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -34,12 +60,15 @@ export default function ComposeModal({
   title,
   mailbox,
   initial,
+  autosave = false,
   onClose,
   onSend,
 }: {
   title: string;
   mailbox: string;
   initial: ComposeDraft;
+  // Keep and restore the draft in this browser (new messages only).
+  autosave?: boolean;
   onClose: () => void;
   onSend: (message: OutgoingMessage) => Promise<void>;
 }) {
@@ -48,8 +77,36 @@ export default function ComposeModal({
   const { locale } = useLocale();
   const errorText = useErrorText();
   const [draft, setDraft] = useState<ComposeDraft>(initial);
-  const [showCcBcc, setShowCcBcc] = useState(Boolean(initial.cc || initial.bcc));
   const [files, setFiles] = useState<File[]>([]);
+  const restored = useRef(false);
+
+  useEffect(() => {
+    if (!autosave) return;
+    const saved = loadDraft(mailbox);
+    if (saved && !isBlank(saved)) {
+      restored.current = true;
+      setDraft(saved);
+      setShowCcBcc(Boolean(saved.cc || saved.bcc));
+      toast(t('draftRestored'));
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!autosave) return;
+    const timer = setTimeout(() => storeDraft(mailbox, isBlank(draft) ? null : draft), 400);
+    return () => clearTimeout(timer);
+  }, [autosave, mailbox, draft]);
+
+  const dirty = files.length > 0 || (restored.current ? !isBlank(draft) : JSON.stringify(draft) !== JSON.stringify(initial));
+  const close = () => {
+    if (autosave || !dirty || confirm(t('discardDraftConfirm'))) onClose();
+  };
+  const discard = () => {
+    if (dirty && !confirm(t('discardDraftConfirm'))) return;
+    if (autosave) storeDraft(mailbox, null);
+    onClose();
+  };
+  const [showCcBcc, setShowCcBcc] = useState(Boolean(initial.cc || initial.bcc));
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,6 +133,7 @@ export default function ComposeModal({
         }))
       );
       await onSend({ ...draft, attachments });
+      if (autosave) storeDraft(mailbox, null);
     } catch (err) {
       setError(errorText(err));
       setSending(false);
@@ -83,13 +141,27 @@ export default function ComposeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 sm:p-4">
-      <div className="flex h-full w-full flex-col bg-surface shadow-xl sm:h-auto sm:max-h-full sm:max-w-3xl sm:rounded-lg">
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+          e.preventDefault();
+          if (!sending && !tooLarge) handleSend();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          close();
+        }
+      }}
+    >
+      <div className="flex h-full w-full flex-col bg-surface shadow-xl sm:h-auto sm:max-h-full sm:max-w-3xl sm:rounded-xl">
+        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-2">
           <h2 className="text-lg font-semibold text-gray-900">
             {title}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label={tc('close')}>
+          <button onClick={close} className="btn-icon" aria-label={tc('close')}>
             <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
@@ -156,9 +228,10 @@ export default function ComposeModal({
           {error && <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</div>}
         </div>
 
-        <div className="flex justify-end gap-3 border-t border-gray-200 px-5 py-3">
-          <button onClick={onClose} className="btn-secondary" disabled={sending}>{t('discard')}</button>
-          <button onClick={handleSend} className="btn-primary disabled:opacity-50" disabled={sending || tooLarge}>
+        <div className="flex items-center justify-end gap-3 border-t border-gray-200 px-5 py-3">
+          <span className="mr-auto hidden text-xs text-gray-400 sm:block">{t('sendHint', { key: modKey() })}</span>
+          <button onClick={discard} className="btn-secondary" disabled={sending}>{t('discard')}</button>
+          <button onClick={handleSend} className="btn-primary" disabled={sending || tooLarge}>
             {sending ? t('sending') : t('send')}
           </button>
         </div>

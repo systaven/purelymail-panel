@@ -1,0 +1,68 @@
+import { defineMessages } from '..';
+
+// Calendar page (components/calendar/*).
+export const calendarMessages = defineMessages({
+  en: {
+    // Toolbar
+    title: 'Calendar', mailbox: 'Mailbox', calendar: 'Calendar', today: 'Today', previousMonth: 'Previous month',
+    nextMonth: 'Next month', view: 'View', month: 'Month', agenda: 'Agenda', newEvent: 'New event',
+    noCalendars: "This mailbox doesn't have any calendars yet.",
+    // Views
+    moreEvents: '+{n} more', allDay: 'All day', untitled: '(No title)', repeats: 'Repeats',
+    noUpcomingEvents: 'No upcoming events this month.', noEventsThisMonth: 'No events this month.',
+    noEventsThisDay: 'No events on this day.',
+    // Event form
+    editEvent: 'Edit event', eventTitle: 'Title', titlePlaceholder: 'Add a title', start: 'Start', end: 'End',
+    location: 'Location', description: 'Description', titleRequired: 'Please enter a title.',
+    endBeforeStart: 'The end can’t be before the start.', invalidDate: 'Please enter a valid start and end.',
+    recurringNote: 'This is a repeating event: changes apply to the whole series, and its dates and times can only be changed in another calendar app.',
+    deleteConfirm: 'Delete “{title}”?', deleteSeriesConfirm: 'Delete “{title}” and all of its repeats?',
+    saveShortcut: '{key} to save',
+    eventCreated: 'Event created.', eventSaved: 'Event saved.', eventDeleted: 'Event deleted.',
+  },
+  'zh-CN': {
+    title: '日历', mailbox: '邮箱', calendar: '日历', today: '今天', previousMonth: '上个月',
+    nextMonth: '下个月', view: '视图', month: '月', agenda: '日程', newEvent: '新建日程',
+    noCalendars: '此邮箱还没有任何日历。',
+    moreEvents: '还有 {n} 项', allDay: '全天', untitled: '（无标题）', repeats: '重复',
+    noUpcomingEvents: '本月没有即将到来的日程。', noEventsThisMonth: '本月没有日程。',
+    noEventsThisDay: '这一天没有日程。',
+    editEvent: '编辑日程', eventTitle: '标题', titlePlaceholder: '添加标题', start: '开始', end: '结束',
+    location: '地点', description: '描述', titleRequired: '请输入标题。',
+    endBeforeStart: '结束时间不能早于开始时间。', invalidDate: '请输入有效的开始和结束时间。',
+    recurringNote: '这是一个重复日程：修改将应用于整个系列，日期和时间只能在其他日历应用中修改。',
+    deleteConfirm: '要删除“{title}”吗？', deleteSeriesConfirm: '要删除“{title}”及其所有重复日程吗？',
+    saveShortcut: '按 {key} 保存',
+    eventCreated: '日程已创建。', eventSaved: '日程已保存。', eventDeleted: '日程已删除。',
+  },
+  'zh-TW': {
+    title: '行事曆', mailbox: '信箱', calendar: '行事曆', today: '今天', previousMonth: '上個月',
+    nextMonth: '下個月', view: '檢視', month: '月', agenda: '行程', newEvent: '新增活動',
+    noCalendars: '此信箱還沒有任何行事曆。',
+    moreEvents: '還有 {n} 項', allDay: '全天', untitled: '（無標題）', repeats: '重複',
+    noUpcomingEvents: '本月沒有即將到來的活動。', noEventsThisMonth: '本月沒有活動。',
+    noEventsThisDay: '這一天沒有活動。',
+    editEvent: '編輯活動', eventTitle: '標題', titlePlaceholder: '新增標題', start: '開始', end: '結束',
+    location: '地點', description: '說明', titleRequired: '請輸入標題。',
+    endBeforeStart: '結束時間不能早於開始時間。', invalidDate: '請輸入有效的開始和結束時間。',
+    recurringNote: '這是一個重複活動：修改會套用到整個系列，日期和時間只能在其他行事曆應用程式中修改。',
+    deleteConfirm: '要刪除「{title}」嗎？', deleteSeriesConfirm: '要刪除「{title}」及其所有重複活動嗎？',
+    saveShortcut: '按 {key} 儲存',
+    eventCreated: '活動已建立。', eventSaved: '活動已儲存。', eventDeleted: '活動已刪除。',
+  },
+  ja: {
+    title: 'カレンダー', mailbox: 'メールボックス', calendar: 'カレンダー', today: '今日', previousMonth: '前の月',
+    nextMonth: '次の月', view: '表示', month: '月', agenda: '予定リスト', newEvent: '新しい予定',
+    noCalendars: 'このメールボックスにはまだカレンダーがありません。',
+    moreEvents: '他 {n} 件', allDay: '終日', untitled: '（タイトルなし）', repeats: '繰り返し',
+    noUpcomingEvents: '今月の今後の予定はありません。', noEventsThisMonth: '今月の予定はありません。',
+    noEventsThisDay: 'この日の予定はありません。',
+    editEvent: '予定を編集', eventTitle: 'タイトル', titlePlaceholder: 'タイトルを追加', start: '開始', end: '終了',
+    location: '場所', description: '説明', titleRequired: 'タイトルを入力してください。',
+    endBeforeStart: '終了を開始より前にすることはできません。', invalidDate: '有効な開始と終了を入力してください。',
+    recurringNote: 'これは繰り返しの予定です。変更はシリーズ全体に適用され、日時は他のカレンダーアプリでのみ変更できます。',
+    deleteConfirm: '「{title}」を削除しますか？', deleteSeriesConfirm: '「{title}」とそのすべての繰り返しを削除しますか？',
+    saveShortcut: '{key} で保存',
+    eventCreated: '予定を作成しました。', eventSaved: '予定を保存しました。', eventDeleted: '予定を削除しました。',
+  },
+});

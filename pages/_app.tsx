@@ -1,6 +1,7 @@
 import { AppProps } from 'next/app';
 import { useRouter } from 'next/router';
 import { ClerkProvider } from '@clerk/nextjs';
+import { Toaster } from 'sonner';
 import { dark } from '@clerk/themes';
 import { jaJP, zhCN, zhTW } from '@clerk/localizations';
 import '@/styles/globals.css';
@@ -26,7 +27,7 @@ function Shell({ Component, pageProps }: AppProps) {
   const { locale } = useLocale();
 
   // Don't apply the auth guard to the login page.
-  const page = router.pathname === '/login' ? (
+  const content = router.pathname === '/login' ? (
     <Component {...pageProps} />
   ) : (
     <AuthProvider>
@@ -34,6 +35,12 @@ function Shell({ Component, pageProps }: AppProps) {
         <Component {...pageProps} />
       </AuthGuard>
     </AuthProvider>
+  );
+  const page = (
+    <>
+      {content}
+      <Toaster theme={isDark ? 'dark' : 'light'} position="bottom-center" richColors closeButton />
+    </>
   );
 
   if (!clerkConfigured) {

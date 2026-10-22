@@ -11,13 +11,16 @@ const SMTP_SECURE = process.env.MAIL_SMTP_SECURE
   ? process.env.MAIL_SMTP_SECURE === 'true'
   : SMTP_PORT !== 587 && SMTP_PORT !== 25;
 
+// IMAP, SMTP and (for calendars and contacts) WebDAV login failures.
 function isAuthError(error: any): boolean {
-  return Boolean(error?.authenticationFailed || error?.responseCode === 535 || error?.code === 'EAUTH');
+  return Boolean(
+    error?.authenticationFailed || error?.responseCode === 535 || error?.code === 'EAUTH' || error?.davStatus === 401
+  );
 }
 
 // Runs `fn` with a password for the mailbox. If login fails (e.g. the app
 // password was deleted in PurelyMail), a fresh one is created and `fn` retried once.
-async function withPassword<T>(box: MailboxHandle, fn: (password: string) => Promise<T>): Promise<T> {
+export async function withPassword<T>(box: MailboxHandle, fn: (password: string) => Promise<T>): Promise<T> {
   try {
     return await fn(await box.credentials.get());
   } catch (error) {

@@ -13,6 +13,8 @@ import {
   UserGroupIcon,
   UserCircleIcon,
   InboxStackIcon,
+  CalendarDaysIcon,
+  BookOpenIcon,
   Bars3Icon,
   XMarkIcon,
 } from '@heroicons/react/24/outline';
@@ -44,12 +46,16 @@ const adminNavigation: { key: NavKey; href: string; icon: typeof HomeIcon }[] = 
   { key: 'navUsers', href: '/users', icon: UsersIcon },
   { key: 'navGuests', href: '/guests', icon: UserGroupIcon },
   { key: 'navMail', href: '/mail', icon: EnvelopeIcon },
+  { key: 'navCalendar', href: '/calendar', icon: CalendarDaysIcon },
+  { key: 'navContacts', href: '/contacts', icon: BookOpenIcon },
   { key: 'navSettings', href: '/settings', icon: CogIcon },
 ];
 
 const guestNavigation: typeof adminNavigation = [
   { key: 'navMyMailboxes', href: '/', icon: InboxStackIcon },
   { key: 'navMail', href: '/mail', icon: EnvelopeIcon },
+  { key: 'navCalendar', href: '/calendar', icon: CalendarDaysIcon },
+  { key: 'navContacts', href: '/contacts', icon: BookOpenIcon },
 ];
 
 const accountItem: (typeof adminNavigation)[number] = { key: 'navMyAccount', href: '/account', icon: UserCircleIcon };
